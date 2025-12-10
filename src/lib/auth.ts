@@ -2,8 +2,7 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { db } from '@/db';
-import { users, accounts, sessions, verificationTokens, orgMembers, organizations } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, accounts, sessions, verificationTokens } from '@/db/schema';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -39,26 +38,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async redirect({ url, baseUrl }) {
       // Redirect to /orgs after sign in
       if (url === baseUrl || url === `${baseUrl}/`) {
-        // Check if user has any organizations
-        try {
-          const session = await auth();
-          if (session?.user?.id) {
-            const memberships = await db
-              .select()
-              .from(orgMembers)
-              .innerJoin(organizations, eq(orgMembers.organizationId, organizations.id))
-              .where(eq(orgMembers.userId, session.user.id))
-              .limit(1);
-
-            // If no organizations, redirect to onboarding
-            if (memberships.length === 0) {
-              return `${baseUrl}/onboarding`;
-            }
-          }
-        } catch (error) {
-          console.error('Failed to check user organizations:', error);
-        }
-
         return `${baseUrl}/orgs`;
       }
       // Allow relative URLs

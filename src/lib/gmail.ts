@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.modify', // For marking messages as read and applying labels
+  'https://www.googleapis.com/auth/gmail.send', // For sending emails (alerts, scheduled reports)
   'https://www.googleapis.com/auth/userinfo.email', // To get the user's email address
 ];
 
@@ -409,4 +410,169 @@ export async function createLabel(
 
   const data = await response.json();
   return data.id;
+}
+
+// ============================================
+// Email Sending Functions
+// ============================================
+
+export interface EmailOptions {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+}
+
+/**
+ * Create a MIME message for sending via Gmail API
+ */
+function createMimeMessage(from: string, options: EmailOptions): string {
+  const to = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+  const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+  const messageParts = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: =?UTF-8?B?${Buffer.from(options.subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(options.text || stripHtml(options.html)).toString('base64'),
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(options.html).toString('base64'),
+    '',
+    `--${boundary}--`,
+  ];
+
+  if (options.replyTo) {
+    messageParts.splice(3, 0, `Reply-To: ${options.replyTo}`);
+  }
+
+  return messageParts.join('\r\n');
+}
+
+/**
+ * Simple HTML to text conversion
+ */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Send an email using the Gmail API
+ */
+export async function sendEmail(
+  accessToken: string,
+  fromEmail: string,
+  options: EmailOptions
+): Promise<{ messageId: string; threadId: string }> {
+  const mimeMessage = createMimeMessage(fromEmail, options);
+
+  // Base64url encode the message
+  const encodedMessage = Buffer.from(mimeMessage)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const response = await fetch(
+    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        raw: encodedMessage,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('Gmail send error:', error);
+    throw new Error(error.error?.message || 'Failed to send email');
+  }
+
+  const data = await response.json();
+  return {
+    messageId: data.id,
+    threadId: data.threadId,
+  };
+}
+
+/**
+ * Send an email using a connected Gmail account
+ * This is the main function to use for sending alerts and reports
+ */
+export async function sendEmailViaGmail(
+  gmailAccountId: string,
+  options: EmailOptions
+): Promise<{ messageId: string; threadId: string }> {
+  // Get the Gmail account details
+  const [account] = await db
+    .select()
+    .from(gmailAccounts)
+    .where(eq(gmailAccounts.id, gmailAccountId));
+
+  if (!account) {
+    throw new Error('Gmail account not found');
+  }
+
+  if (!account.email) {
+    throw new Error('Gmail account email not configured');
+  }
+
+  // Get a valid access token (refreshes if needed)
+  const accessToken = await getValidAccessToken(gmailAccountId);
+
+  // Send the email
+  return sendEmail(accessToken, account.email, options);
+}
+
+/**
+ * Get the primary Gmail account for an organization (for sending)
+ * Returns the first connected Gmail account
+ */
+export async function getOrgSendingAccount(organizationId: string): Promise<{
+  id: string;
+  email: string;
+} | null> {
+  const [account] = await db
+    .select({
+      id: gmailAccounts.id,
+      email: gmailAccounts.email,
+    })
+    .from(gmailAccounts)
+    .where(eq(gmailAccounts.organizationId, organizationId))
+    .limit(1);
+
+  if (!account || !account.email) {
+    return null;
+  }
+
+  return account;
 }

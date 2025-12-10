@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Globe,
   CheckCircle2,
@@ -12,6 +18,10 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
+  Loader2,
 } from 'lucide-react';
 
 interface Domain {
@@ -26,7 +36,127 @@ interface DomainsListProps {
   orgSlug: string;
 }
 
+interface DnsStatus {
+  spf: { valid: boolean; record: string | null };
+  dkim: { valid: boolean; selectors: string[] };
+  dmarc: { valid: boolean; record: string | null };
+}
+
 const PAGE_SIZE = 20;
+
+// DNS Status Badge component that fetches live DNS status
+function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: string }) {
+  const [status, setStatus] = useState<DnsStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    // Only fetch once per mount
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    const controller = new AbortController();
+
+    async function fetchDnsStatus() {
+      try {
+        const res = await fetch(`/api/orgs/${orgSlug}/domains/${domainId}/dns-status`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStatus(data);
+        }
+      } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Failed to fetch DNS status:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDnsStatus();
+
+    return () => {
+      controller.abort();
+    };
+  }, [domainId, orgSlug]);
+
+  if (loading) {
+    return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+  }
+
+  if (!status) {
+    return <ShieldAlert className="h-4 w-4 text-muted-foreground" />;
+  }
+
+  const hasSpf = status.spf.valid;
+  const hasDkim = status.dkim.valid;
+  const hasDmarc = status.dmarc.valid;
+  const allValid = hasSpf && hasDkim && hasDmarc;
+  const noneValid = !hasSpf && !hasDkim && !hasDmarc;
+
+  return (
+    <TooltipProvider>
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={`p-1 rounded ${hasSpf ? 'text-green-600' : 'text-red-500'}`}>
+              <span className="text-xs font-medium">SPF</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-medium">SPF: {hasSpf ? 'Valid' : 'Missing'}</p>
+            {status.spf.record && (
+              <p className="text-xs text-muted-foreground max-w-xs truncate">{status.spf.record}</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={`p-1 rounded ${hasDkim ? 'text-green-600' : 'text-yellow-500'}`}>
+              <span className="text-xs font-medium">DKIM</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-medium">DKIM: {hasDkim ? 'Found' : 'Not detected'}</p>
+            {status.dkim.selectors.length > 0 ? (
+              <p className="text-xs text-muted-foreground">Selectors: {status.dkim.selectors.join(', ')}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">No common selectors found</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={`p-1 rounded ${hasDmarc ? 'text-green-600' : 'text-red-500'}`}>
+              <span className="text-xs font-medium">DMARC</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-medium">DMARC: {hasDmarc ? 'Valid' : 'Missing'}</p>
+            {status.dmarc.record && (
+              <p className="text-xs text-muted-foreground max-w-xs truncate">{status.dmarc.record}</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+
+        {allValid && (
+          <ShieldCheck className="h-4 w-4 text-green-600 ml-1" />
+        )}
+        {noneValid && (
+          <ShieldX className="h-4 w-4 text-red-500 ml-1" />
+        )}
+        {!allValid && !noneValid && (
+          <ShieldAlert className="h-4 w-4 text-yellow-500 ml-1" />
+        )}
+      </div>
+    </TooltipProvider>
+  );
+}
 
 export function DomainsList({ domains, orgSlug }: DomainsListProps) {
   const [search, setSearch] = useState('');
@@ -88,7 +218,8 @@ export function DomainsList({ domains, orgSlug }: DomainsListProps) {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <DnsStatusBadges domainId={domain.id} orgSlug={orgSlug} />
               {domain.verifiedAt ? (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" />
@@ -109,7 +240,7 @@ export function DomainsList({ domains, orgSlug }: DomainsListProps) {
       {filteredDomains.length === 0 && search && (
         <div className="text-center py-8 text-muted-foreground">
           <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No domains match "{search}"</p>
+          <p>No domains match &quot;{search}&quot;</p>
         </div>
       )}
 

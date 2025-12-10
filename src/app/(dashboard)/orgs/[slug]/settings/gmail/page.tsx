@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Mail, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { GmailConnectButton } from '@/components/gmail/gmail-connect-button';
 import { GmailAccountCard } from '@/components/gmail/gmail-account-card';
+import { EmailSendingCard } from '@/components/gmail/email-sending-card';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -147,6 +148,12 @@ export default async function GmailSettingsPage({ params }: PageProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Email Sending */}
+      <EmailSendingCard
+        accounts={accounts.map(a => ({ id: a.id, email: a.email }))}
+        orgSlug={slug}
+      />
 
       {/* DMARC Setup Guide */}
       <Card>
