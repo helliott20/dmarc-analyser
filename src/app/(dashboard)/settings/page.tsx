@@ -97,7 +97,7 @@ export default async function ProfilePage() {
             Linked Accounts
           </CardTitle>
           <CardDescription>
-            Accounts connected to your DMARC Analyzer profile
+            Accounts connected to your DMARC Analyser profile
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,6 +1,6 @@
 # Forensic Reports (RUF) Implementation
 
-This document describes the implementation of the Forensic Reports (RUF) feature for the DMARC Analyzer application.
+This document describes the implementation of the Forensic Reports (RUF) feature for the DMARC Analyser application.
 
 ## Overview
 

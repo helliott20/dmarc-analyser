@@ -70,7 +70,7 @@ export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) 
     <div className="container max-w-4xl mx-auto py-8 px-4">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Get Started with DMARC Analyzer</h1>
+          <h1 className="text-2xl font-bold">Get Started with DMARC Analyser</h1>
           <Button variant="ghost" size="icon" onClick={onSkip}>
             <X className="h-4 w-4" />
           </Button>

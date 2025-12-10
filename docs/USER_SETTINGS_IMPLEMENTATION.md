@@ -1,6 +1,6 @@
 # User Settings Implementation
 
-This document describes the user settings implementation for the DMARC Analyzer application.
+This document describes the user settings implementation for the DMARC Analyser application.
 
 ## Overview
 

@@ -191,7 +191,7 @@ Discord webhooks receive rich embeds:
       ],
       "timestamp": "2024-01-01T00:00:00.000Z",
       "footer": {
-        "text": "DMARC Analyzer"
+        "text": "DMARC Analyser"
       }
     }
   ]
@@ -283,7 +283,7 @@ const isValid = verifyWebhookSignature(
 
 1. Go to your Slack workspace and create an incoming webhook
 2. Copy the webhook URL
-3. In DMARC Analyzer, navigate to Settings > Webhooks
+3. In DMARC Analyser, navigate to Settings > Webhooks
 4. Click "Add Webhook"
 5. Fill in the form:
    - Name: "Production Alerts"
@@ -385,7 +385,7 @@ Use the test button in the UI to send a sample payload:
   "timestamp": "2024-01-01T00:00:00.000Z",
   "organizationId": "test",
   "data": {
-    "message": "This is a test webhook from DMARC Analyzer",
+    "message": "This is a test webhook from DMARC Analyser",
     "severity": "info",
     "domain": "example.com",
     "type": "test"

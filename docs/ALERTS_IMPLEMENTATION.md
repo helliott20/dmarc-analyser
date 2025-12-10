@@ -1,6 +1,6 @@
 # Alerts System Implementation
 
-This document describes the complete implementation of the Alerts system for the DMARC Analyzer application.
+This document describes the complete implementation of the Alerts system for the DMARC Analyser application.
 
 ## Overview
 

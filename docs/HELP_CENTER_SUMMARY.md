@@ -2,7 +2,7 @@
 
 ## What Was Built
 
-A comprehensive help center system with multiple access points throughout the DMARC Analyzer application.
+A comprehensive help center system with multiple access points throughout the DMARC Analyser application.
 
 ## Key Features Implemented
 

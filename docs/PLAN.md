@@ -1,4 +1,4 @@
-# DMARC Analyzer Implementation Plan
+# DMARC Analyser Implementation Plan
 
 ## Overview
 Self-hosted DMARC analyzer similar to DMARCIAN with intuitive UI for understanding email authentication reports.

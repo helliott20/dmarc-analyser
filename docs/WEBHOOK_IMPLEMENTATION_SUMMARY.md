@@ -288,7 +288,7 @@ function verifyWebhookSignature(payload, signature, secret) {
   "timestamp": "2024-01-01T00:00:00.000Z",
   "organizationId": "test",
   "data": {
-    "message": "This is a test webhook from DMARC Analyzer",
+    "message": "This is a test webhook from DMARC Analyser",
     "severity": "info",
     "domain": "example.com",
     "type": "test"

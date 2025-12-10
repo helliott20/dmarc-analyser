@@ -1,4 +1,4 @@
-# DMARC Analyzer
+# DMARC Analyser
 
 A self-hosted DMARC, SPF, and DKIM report analyzer with an intuitive web interface. Monitor your email authentication and protect your domain from spoofing.
 
@@ -75,7 +75,7 @@ Edit `.env.local` and add your configuration:
 
 ```bash
 # Database (default works with docker-compose)
-DATABASE_URL=postgresql://dmarc:dmarc_dev_password@localhost:5432/dmarc_analyzer
+DATABASE_URL=postgresql://dmarc:dmarc_dev_password@localhost:5432/dmarc_analyser
 
 # Google OAuth - See docs/google-oauth-setup.md
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com

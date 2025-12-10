@@ -1,5 +1,5 @@
 /**
- * CSV Export Utilities for DMARC Analyzer
+ * CSV Export Utilities for DMARC Analyser
  */
 
 export interface ReportExportRow {

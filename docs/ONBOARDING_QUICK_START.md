@@ -59,11 +59,11 @@ To make a step required, set `skippable: false`.
 
 ### What is Onboarding?
 
-The onboarding wizard helps you set up your DMARC Analyzer account in just a few minutes.
+The onboarding wizard helps you set up your DMARC Analyser account in just a few minutes.
 
 ### Steps Overview
 
-1. **Welcome** - Learn about DMARC Analyzer features
+1. **Welcome** - Learn about DMARC Analyser features
 2. **Create Organization** - Set up your workspace
 3. **Add Domain** (Optional) - Add your first domain to monitor
 4. **Verify Domain** (Optional) - Prove you own the domain

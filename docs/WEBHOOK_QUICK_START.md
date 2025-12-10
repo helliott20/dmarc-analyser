@@ -2,7 +2,7 @@
 
 ## 🚀 Getting Started with Webhooks
 
-Webhooks allow you to receive real-time notifications from the DMARC Analyzer to your favorite communication platform.
+Webhooks allow you to receive real-time notifications from the DMARC Analyser to your favorite communication platform.
 
 ## Setup Guide by Platform
 
@@ -15,7 +15,7 @@ Webhooks allow you to receive real-time notifications from the DMARC Analyzer to
    - Choose a channel
    - Copy the webhook URL (starts with `https://hooks.slack.com/services/...`)
 
-2. **Configure in DMARC Analyzer:**
+2. **Configure in DMARC Analyser:**
    - Navigate to Settings → Webhooks
    - Click "Add Webhook"
    - Fill in:
@@ -39,7 +39,7 @@ Webhooks allow you to receive real-time notifications from the DMARC Analyzer to
    - Choose a channel
    - Copy the webhook URL
 
-2. **Configure in DMARC Analyzer:**
+2. **Configure in DMARC Analyser:**
    - Navigate to Settings → Webhooks
    - Click "Add Webhook"
    - Fill in:
@@ -61,7 +61,7 @@ Webhooks allow you to receive real-time notifications from the DMARC Analyzer to
    - Search for "Incoming Webhook"
    - Configure and copy the webhook URL
 
-2. **Configure in DMARC Analyzer:**
+2. **Configure in DMARC Analyser:**
    - Navigate to Settings → Webhooks
    - Click "Add Webhook"
    - Fill in:
@@ -82,7 +82,7 @@ Webhooks allow you to receive real-time notifications from the DMARC Analyzer to
    - Endpoint should return 200 OK on success
    - Implement HMAC signature verification (see below)
 
-2. **Configure in DMARC Analyzer:**
+2. **Configure in DMARC Analyser:**
    - Navigate to Settings → Webhooks
    - Click "Add Webhook"
    - Fill in:
@@ -292,7 +292,7 @@ Authentication pass rate has dropped below threshold
 Domain: example.com
 Severity: CRITICAL
 
-DMARC Analyzer • Dec 10, 2024 at 10:30 AM
+DMARC Analyser • Dec 10, 2024 at 10:30 AM
 ```
 
 ### Custom JSON Payload Example

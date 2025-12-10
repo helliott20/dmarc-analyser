@@ -101,7 +101,7 @@ const troubleshootingItems: TroubleshootingItem[] = [
         ],
         solutions: [
           'Ensure you have proper tools to decompress gzip or zip files',
-          'Use DMARC Analyzer\'s automatic report import feature',
+          'Use DMARC Analyser\'s automatic report import feature',
           'Connect Gmail import to automatically process reports',
           'Check that the report files are complete and not corrupted',
           'Verify you have the latest version of report processing tools',

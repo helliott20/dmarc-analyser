@@ -65,7 +65,7 @@ export const helpCategories: HelpCategoryInfo[] = [
   {
     id: 'features',
     name: 'Features',
-    description: 'Explore all the features of DMARC Analyzer',
+    description: 'Explore all the features of DMARC Analyser',
     icon: BarChart3,
   },
   {
@@ -96,7 +96,7 @@ export const helpArticles: HelpArticle[] = [
     category: 'getting-started',
     icon: Compass,
     href: '/help/getting-started',
-    content: 'Complete guide to getting started with DMARC Analyzer',
+    content: 'Complete guide to getting started with DMARC Analyser',
     keywords: [
       'getting started',
       'setup',

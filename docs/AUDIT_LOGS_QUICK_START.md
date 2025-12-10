@@ -184,4 +184,4 @@ curl http://localhost:3000/api/orgs/your-org/audit-logs?page=2&pageSize=100
 
 ---
 
-That's it! You're ready to track all activities in your DMARC Analyzer. 🎉
+That's it! You're ready to track all activities in your DMARC Analyser. 🎉

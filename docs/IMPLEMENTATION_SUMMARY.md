@@ -1,7 +1,7 @@
 # Known Sender Library - Implementation Summary
 
 ## Overview
-Successfully implemented a comprehensive Known Sender Library feature for the DMARC Analyzer that helps users automatically identify and classify email sources from their DMARC reports.
+Successfully implemented a comprehensive Known Sender Library feature for the DMARC Analyser that helps users automatically identify and classify email sources from their DMARC reports.
 
 ## What Was Built
 

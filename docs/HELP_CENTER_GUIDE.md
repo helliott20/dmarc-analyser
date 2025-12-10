@@ -1,6 +1,6 @@
 # Help Center Integration Guide
 
-This guide explains the comprehensive help center system integrated into the DMARC Analyzer application.
+This guide explains the comprehensive help center system integrated into the DMARC Analyser application.
 
 ## Overview
 

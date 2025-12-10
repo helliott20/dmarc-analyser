@@ -2,7 +2,7 @@
 
 ## What's Been Implemented
 
-A complete Forensic Reports (RUF) feature has been added to the DMARC Analyzer application. This allows you to view and analyze individual DMARC failure reports with detailed authentication information.
+A complete Forensic Reports (RUF) feature has been added to the DMARC Analyser application. This allows you to view and analyze individual DMARC failure reports with detailed authentication information.
 
 ## Getting Started
 

@@ -110,7 +110,7 @@ export function formatDiscordPayload(payload: WebhookPayload): object {
         fields,
         timestamp: new Date().toISOString(),
         footer: {
-          text: 'DMARC Analyzer',
+          text: 'DMARC Analyser',
         },
       },
     ],
@@ -361,7 +361,7 @@ export async function testWebhook(
     timestamp: new Date().toISOString(),
     organizationId: 'test',
     data: {
-      message: 'This is a test webhook from DMARC Analyzer',
+      message: 'This is a test webhook from DMARC Analyser',
       severity: 'info',
       domain: 'example.com',
       type: 'test',

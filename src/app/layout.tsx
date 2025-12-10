@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DMARC Analyzer",
+  title: "DMARC Analyser",
   description: "Monitor and analyze your email authentication with DMARC, SPF, and DKIM reports",
 };
 

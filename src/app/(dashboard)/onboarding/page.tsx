@@ -44,7 +44,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({ completed: true }),
       });
 
-      toast.success('Welcome to DMARC Analyzer!');
+      toast.success('Welcome to DMARC Analyser!');
       router.push('/orgs');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);

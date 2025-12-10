@@ -73,7 +73,7 @@ export default function HelpPage() {
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold tracking-tight">Help Center</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Everything you need to know about DMARC Analyzer
+          Everything you need to know about DMARC Analyser
         </p>
       </div>
 

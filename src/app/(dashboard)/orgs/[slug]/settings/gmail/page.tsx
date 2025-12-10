@@ -77,7 +77,7 @@ export default async function GmailSettingsPage({ params }: PageProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            When you connect a Gmail account, the DMARC Analyzer will:
+            When you connect a Gmail account, the DMARC Analyser will:
           </p>
           <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2 ml-2">
             <li>

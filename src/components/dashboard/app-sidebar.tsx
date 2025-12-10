@@ -100,7 +100,7 @@ export function AppSidebar({
             <Shield className="h-6 w-6 text-primary" />
           )}
           <span className="font-semibold text-lg">
-            {currentOrg?.name || 'DMARC Analyzer'}
+            {currentOrg?.name || 'DMARC Analyser'}
           </span>
         </Link>
       </SidebarHeader>

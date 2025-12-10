@@ -1,10 +1,10 @@
 # Known Senders - Quick Start Guide
 
-This guide explains how to populate your DMARC Analyzer with known email service providers for automatic source classification.
+This guide explains how to populate your DMARC Analyser with known email service providers for automatic source classification.
 
 ## What Are Known Senders?
 
-Known Senders are pre-configured email service providers that the DMARC Analyzer can automatically identify and classify. This includes:
+Known Senders are pre-configured email service providers that the DMARC Analyser can automatically identify and classify. This includes:
 
 - Corporate email services (Google Workspace, Microsoft 365, etc.)
 - Transactional email services (SendGrid, Postmark, Amazon SES, etc.)
@@ -166,7 +166,7 @@ It will automatically skip providers that already exist:
 
 ## How It Works
 
-Once seeded, the DMARC Analyzer will automatically:
+Once seeded, the DMARC Analyser will automatically:
 
 1. **Match IP Addresses**: When processing DMARC reports, the system checks if the source IP falls within any known provider's IP ranges
 

@@ -24,7 +24,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
             <Shield className="h-10 w-10 text-primary" />
           </div>
         </div>
-        <h2 className="text-3xl font-bold">Welcome to DMARC Analyzer</h2>
+        <h2 className="text-3xl font-bold">Welcome to DMARC Analyser</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Protect your email domain from spoofing and phishing attacks with
           comprehensive DMARC monitoring and reporting.

@@ -1,6 +1,6 @@
 # Audit Logs System
 
-Complete audit logging system for tracking all organizational activities in the DMARC Analyzer.
+Complete audit logging system for tracking all organizational activities in the DMARC Analyser.
 
 ## Overview
 

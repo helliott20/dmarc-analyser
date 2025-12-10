@@ -2,7 +2,7 @@
 
 ## Overview
 
-A complete audit logging system has been implemented for the DMARC Analyzer application. This system tracks all significant activities within organizations, providing visibility into who did what, when, and from where.
+A complete audit logging system has been implemented for the DMARC Analyser application. This system tracks all significant activities within organizations, providing visibility into who did what, when, and from where.
 
 ## What Was Implemented
 

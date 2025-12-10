@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: dmarc
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dmarc_dev_password}
-      POSTGRES_DB: dmarc_analyzer
+      POSTGRES_DB: dmarc_analyser
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
@@ -15,7 +15,7 @@ services:
     networks:
       - dmarc-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dmarc -d dmarc_analyzer"]
+      test: ["CMD-SHELL", "pg_isready -U dmarc -d dmarc_analyser"]
       interval: 10s
       timeout: 5s
       retries: 5

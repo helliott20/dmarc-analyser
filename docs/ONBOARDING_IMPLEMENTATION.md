@@ -1,6 +1,6 @@
 # Onboarding Wizard Implementation
 
-A comprehensive multi-step onboarding wizard to guide new users through the initial setup of the DMARC Analyzer application.
+A comprehensive multi-step onboarding wizard to guide new users through the initial setup of the DMARC Analyser application.
 
 ## Overview
 
@@ -98,7 +98,7 @@ interface StepProps {
 ```
 
 #### Step 1: Welcome Step
-- Introduces DMARC Analyzer features
+- Introduces DMARC Analyser features
 - Explains what will happen during onboarding
 - Highlights key benefits (authentication, analytics, alerts, security)
 - Non-skippable

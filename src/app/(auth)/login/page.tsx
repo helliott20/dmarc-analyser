@@ -32,7 +32,7 @@ function LoginForm() {
               <Shield className="h-12 w-12 text-primary" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">DMARC Analyzer</h1>
+          <h1 className="text-3xl font-bold tracking-tight">DMARC Analyser</h1>
           <p className="text-muted-foreground mt-2">
             Monitor and analyze your email authentication
           </p>

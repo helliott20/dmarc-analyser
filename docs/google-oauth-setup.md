@@ -1,6 +1,6 @@
 # Google OAuth Setup Guide
 
-This guide walks you through setting up Google OAuth for the DMARC Analyzer. You'll need to configure two OAuth consent screens and credentials:
+This guide walks you through setting up Google OAuth for the DMARC Analyser. You'll need to configure two OAuth consent screens and credentials:
 
 1. **Google Sign-In** - For user authentication
 2. **Gmail API** - For importing DMARC reports from Gmail (optional, but recommended)
@@ -15,7 +15,7 @@ This guide walks you through setting up Google OAuth for the DMARC Analyzer. You
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click the project dropdown at the top of the page
 3. Click **New Project**
-4. Enter a project name (e.g., "DMARC Analyzer")
+4. Enter a project name (e.g., "DMARC Analyser")
 5. Click **Create**
 6. Wait for the project to be created, then select it from the project dropdown
 
@@ -31,7 +31,7 @@ Before creating credentials, you need to configure the OAuth consent screen.
 
 | Field | Value |
 |-------|-------|
-| App name | DMARC Analyzer |
+| App name | DMARC Analyser |
 | User support email | Your email address |
 | App logo | (Optional) Upload your logo |
 | Application home page | `https://your-domain.com` or `http://localhost:3000` for development |
@@ -103,7 +103,7 @@ To enable an API:
 
 | Field | Value |
 |-------|-------|
-| Name | DMARC Analyzer Web Client |
+| Name | DMARC Analyser Web Client |
 | Authorized JavaScript origins | `http://localhost:3000` (add your production URL later) |
 | Authorized redirect URIs | See below |
 

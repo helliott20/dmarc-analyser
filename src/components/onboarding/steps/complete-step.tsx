@@ -28,7 +28,7 @@ export function CompleteStep({ onNext, stepData }: CompleteStepProps) {
         </div>
         <h2 className="text-3xl font-bold">You&apos;re All Set!</h2>
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          Your DMARC Analyzer account is ready. Here&apos;s what you&apos;ve accomplished:
+          Your DMARC Analyser account is ready. Here&apos;s what you&apos;ve accomplished:
         </p>
       </div>
 
