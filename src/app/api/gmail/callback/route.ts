@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const error = searchParams.get('error');
 
     // Decode state to get org info
-    let stateData: { orgId: string; orgSlug: string; userId: string };
+    let stateData: { orgId: string; orgSlug: string; userId: string; accountId?: string; authType?: string };
     try {
       stateData = JSON.parse(Buffer.from(state || '', 'base64').toString());
     } catch {
@@ -87,6 +87,69 @@ export async function GET(request: Request) {
     if (!email) {
       return NextResponse.redirect(
         new URL(`/orgs/${orgSlug}/settings/gmail?error=no_email`, request.url)
+      );
+    }
+
+    // Handle send authorization - update existing account with send permission
+    if (stateData.authType === 'send' && stateData.accountId) {
+      await db
+        .update(gmailAccounts)
+        .set({
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          tokenExpiry: new Date(tokens.expiry_date),
+          sendEnabled: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(gmailAccounts.id, stateData.accountId));
+
+      return NextResponse.redirect(
+        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_authorized`, request.url)
+      );
+    }
+
+    // Handle new account specifically for sending (not for import)
+    if (stateData.authType === 'new_send') {
+      // Check if this Gmail account already exists for this org
+      const existingSend = await db
+        .select()
+        .from(gmailAccounts)
+        .where(
+          and(
+            eq(gmailAccounts.organizationId, stateData.orgId),
+            eq(gmailAccounts.email, email)
+          )
+        )
+        .limit(1);
+
+      if (existingSend.length > 0) {
+        // Update existing account to enable sending
+        await db
+          .update(gmailAccounts)
+          .set({
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            tokenExpiry: new Date(tokens.expiry_date),
+            sendEnabled: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(gmailAccounts.id, existingSend[0].id));
+      } else {
+        // Create new account specifically for sending (not for import)
+        await db.insert(gmailAccounts).values({
+          organizationId: stateData.orgId,
+          email,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          tokenExpiry: new Date(tokens.expiry_date),
+          addedBy: session.user.id,
+          syncEnabled: false, // Not used for importing
+          sendEnabled: true,  // Enabled for sending
+        });
+      }
+
+      return NextResponse.redirect(
+        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_account_added`, request.url)
       );
     }
 

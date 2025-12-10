@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -48,38 +48,42 @@ const PAGE_SIZE = 20;
 function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: string }) {
   const [status, setStatus] = useState<DnsStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const fetchedRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Only fetch once per mount
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
-    const controller = new AbortController();
+    let cancelled = false;
+    const url = `/api/orgs/${orgSlug}/domains/${domainId}/dns-status`;
 
     async function fetchDnsStatus() {
       try {
-        const res = await fetch(`/api/orgs/${orgSlug}/domains/${domainId}/dns-status`, {
-          signal: controller.signal,
-        });
+        const res = await fetch(url);
+        if (cancelled) return;
+
         if (res.ok) {
           const data = await res.json();
-          setStatus(data);
+          if (!cancelled) {
+            setStatus(data);
+          }
+        } else {
+          if (!cancelled) {
+            setError(`HTTP ${res.status}`);
+          }
         }
       } catch (err) {
-        // Ignore abort errors
-        if (err instanceof Error && err.name !== 'AbortError') {
-          console.error('Failed to fetch DNS status:', err);
+        if (!cancelled && err instanceof Error) {
+          setError(err.message);
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchDnsStatus();
 
     return () => {
-      controller.abort();
+      cancelled = true;
     };
   }, [domainId, orgSlug]);
 
@@ -87,8 +91,19 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
     return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
   }
 
-  if (!status) {
-    return <ShieldAlert className="h-4 w-4 text-muted-foreground" />;
+  if (error || !status) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <ShieldAlert className="h-4 w-4 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{error || 'Failed to load DNS status'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   }
 
   const hasSpf = status.spf.valid;

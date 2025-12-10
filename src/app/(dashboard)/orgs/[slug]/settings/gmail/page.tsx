@@ -62,7 +62,7 @@ export default async function GmailSettingsPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Gmail Import</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Gmail</h1>
         <p className="text-muted-foreground">
           Connect Gmail accounts to automatically import DMARC reports
         </p>
@@ -151,8 +151,9 @@ export default async function GmailSettingsPage({ params }: PageProps) {
 
       {/* Email Sending */}
       <EmailSendingCard
-        accounts={accounts.map(a => ({ id: a.id, email: a.email }))}
+        accounts={accounts.map(a => ({ id: a.id, email: a.email, sendEnabled: a.sendEnabled }))}
         orgSlug={slug}
+        orgId={organization.id}
       />
 
       {/* DMARC Setup Guide */}

@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { gmailAccounts } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -555,7 +555,7 @@ export async function sendEmailViaGmail(
 
 /**
  * Get the primary Gmail account for an organization (for sending)
- * Returns the first connected Gmail account
+ * Returns the first Gmail account authorized for sending
  */
 export async function getOrgSendingAccount(organizationId: string): Promise<{
   id: string;
@@ -567,7 +567,12 @@ export async function getOrgSendingAccount(organizationId: string): Promise<{
       email: gmailAccounts.email,
     })
     .from(gmailAccounts)
-    .where(eq(gmailAccounts.organizationId, organizationId))
+    .where(
+      and(
+        eq(gmailAccounts.organizationId, organizationId),
+        eq(gmailAccounts.sendEnabled, true)
+      )
+    )
     .limit(1);
 
   if (!account || !account.email) {

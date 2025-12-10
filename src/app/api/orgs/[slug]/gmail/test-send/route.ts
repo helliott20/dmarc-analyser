@@ -52,20 +52,51 @@ export async function POST(
     let accountId = gmailAccountId;
 
     if (!accountId) {
-      // Use the first connected Gmail account
+      // Use the first send-enabled Gmail account
       const [account] = await db
         .select({ id: gmailAccounts.id })
         .from(gmailAccounts)
-        .where(eq(gmailAccounts.organizationId, org.id))
+        .where(
+          and(
+            eq(gmailAccounts.organizationId, org.id),
+            eq(gmailAccounts.sendEnabled, true)
+          )
+        )
         .limit(1);
 
       if (!account) {
         return NextResponse.json(
-          { error: 'No Gmail account connected. Please connect a Gmail account first.' },
+          { error: 'No Gmail account authorized for sending. Please authorize a Gmail account first.' },
           { status: 400 }
         );
       }
       accountId = account.id;
+    } else {
+      // Verify the specified account is authorized for sending
+      const [account] = await db
+        .select({ sendEnabled: gmailAccounts.sendEnabled })
+        .from(gmailAccounts)
+        .where(
+          and(
+            eq(gmailAccounts.id, accountId),
+            eq(gmailAccounts.organizationId, org.id)
+          )
+        )
+        .limit(1);
+
+      if (!account) {
+        return NextResponse.json(
+          { error: 'Gmail account not found' },
+          { status: 404 }
+        );
+      }
+
+      if (!account.sendEnabled) {
+        return NextResponse.json(
+          { error: 'This Gmail account is not authorized for sending. Please authorize it first.' },
+          { status: 403 }
+        );
+      }
     }
 
     // Send test email
