@@ -6,6 +6,13 @@ import { db } from '@/db';
 import { organizations, gmailAccounts, users } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sendEmailViaGmail, getOrgSendingAccount } from './gmail';
+
+/**
+ * Get the app base URL from environment variables
+ */
+function getAppUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+}
 import {
   generateInvitationEmail,
   generateAlertEmail,
@@ -99,7 +106,7 @@ export async function sendInvitationEmail(params: {
     .where(eq(users.id, inviterId))
     .limit(1);
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`;
+  const inviteUrl = `${getAppUrl()}/invite/${token}`;
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
@@ -143,7 +150,7 @@ export async function sendAlertEmail(params: {
     .where(eq(organizations.id, organizationId))
     .limit(1);
 
-  const alertUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orgs/${orgData?.slug}/alerts`;
+  const alertUrl = `${getAppUrl()}/orgs/${orgData?.slug}/alerts`;
 
   const { html, text, subject } = generateAlertEmail({
     org,
@@ -196,7 +203,7 @@ export async function sendWelcomeEmail(params: {
     return { success: false, error: 'User not found' };
   }
 
-  const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orgs/${orgData.slug}`;
+  const dashboardUrl = `${getAppUrl()}/orgs/${orgData.slug}`;
 
   const { html, text, subject } = generateWelcomeEmail({
     org: orgData,
@@ -246,7 +253,7 @@ export async function sendScheduledReportEmail(params: {
   }
 
   // Build report URL
-  let reportUrl = `${process.env.NEXT_PUBLIC_APP_URL}/orgs/${orgData.slug}`;
+  let reportUrl = `${getAppUrl()}/orgs/${orgData.slug}`;
   if (domainId) {
     reportUrl += `/domains/${domainId}`;
   }
