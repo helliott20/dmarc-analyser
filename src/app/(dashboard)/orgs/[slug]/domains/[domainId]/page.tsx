@@ -214,27 +214,29 @@ export default async function DomainPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Quick Navigation */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}/timeline`}>
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Timeline
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}/sources`}>
-              <Server className="h-4 w-4 mr-2" />
-              Sources
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>
-              <Mail className="h-4 w-4 mr-2" />
-              Reports
-            </Link>
-          </Button>
-        </div>
+        {/* Quick Navigation (only show data pages if verified) */}
+        {isVerified && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}/timeline`}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Timeline
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}/sources`}>
+                <Server className="h-4 w-4 mr-2" />
+                Sources
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>
+                <Mail className="h-4 w-4 mr-2" />
+                Reports
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Verification Card (if not verified) */}
@@ -247,24 +249,52 @@ export default async function DomainPage({ params }: PageProps) {
         />
       )}
 
-      {/* Stats Cards - with live polling during sync */}
-      <DomainStats
-        orgSlug={slug}
-        domainId={domainId}
-        initialStats={stats}
-      />
+      {/* Data Hidden Warning (if not verified) */}
+      {!isVerified && (
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                  Report data is hidden until domain is verified
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  DMARC reports are being collected for this domain, but you need to verify
+                  ownership before viewing the data. This ensures only domain owners can
+                  access email authentication reports.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats Cards - with live polling during sync (only show if verified) */}
+      {isVerified && (
+        <DomainStats
+          orgSlug={slug}
+          domainId={domainId}
+          initialStats={stats}
+        />
+      )}
 
       {/* DMARC Record Card and Policy Recommendations */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <DmarcRecordCard domain={domain.domain} dmarcRecord={domain.dmarcRecord} />
+        <DmarcRecordCard
+          domain={domain.domain}
+          domainId={domainId}
+          orgSlug={slug}
+          dmarcRecord={domain.dmarcRecord}
+        />
         <PolicyRecommendations
           orgSlug={slug}
           domainId={domainId}
         />
       </div>
 
-      {/* Subdomain Summary */}
-      {subdomainStats.totalSubdomains > 0 && (
+      {/* Subdomain Summary (only show if verified) */}
+      {isVerified && subdomainStats.totalSubdomains > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -314,50 +344,52 @@ export default async function DomainPage({ params }: PageProps) {
         </Card>
       )}
 
-      {/* Recent Reports */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Recent Reports</CardTitle>
-            <CardDescription>Latest DMARC aggregate reports</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>
-              View All
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {recentReports.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No reports received yet</p>
-              <p className="text-sm mt-2">
-                Reports will appear here once email providers start sending them
-              </p>
+      {/* Recent Reports (only show if verified) */}
+      {isVerified && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Recent Reports</CardTitle>
+              <CardDescription>Latest DMARC aggregate reports</CardDescription>
             </div>
-          ) : (
-            <div className="divide-y">
-              {recentReports.map((report) => (
-                <Link
-                  key={report.id}
-                  href={`/orgs/${slug}/domains/${domainId}/reports/${report.id}`}
-                  className="flex items-center justify-between py-3 hover:bg-muted/50 -mx-4 px-4 transition-colors"
-                >
-                  <div>
-                    <p className="font-medium">{report.orgName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(report.dateRangeBegin).toLocaleDateString()} -{' '}
-                      {new Date(report.dateRangeEnd).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>
+                View All
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentReports.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No reports received yet</p>
+                <p className="text-sm mt-2">
+                  Reports will appear here once email providers start sending them
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {recentReports.map((report) => (
+                  <Link
+                    key={report.id}
+                    href={`/orgs/${slug}/domains/${domainId}/reports/${report.id}`}
+                    className="flex items-center justify-between py-3 hover:bg-muted/50 -mx-4 px-4 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium">{report.orgName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(report.dateRangeBegin).toLocaleDateString()} -{' '}
+                        {new Date(report.dateRangeEnd).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

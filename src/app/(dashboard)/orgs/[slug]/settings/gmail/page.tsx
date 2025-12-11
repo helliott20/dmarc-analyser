@@ -10,14 +10,24 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Mail, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Mail, AlertTriangle } from 'lucide-react';
 import { GmailConnectButton } from '@/components/gmail/gmail-connect-button';
-import { GmailAccountCard } from '@/components/gmail/gmail-account-card';
+import { GmailAccountsList } from '@/components/gmail/gmail-accounts-list';
 import { EmailSendingCard } from '@/components/gmail/email-sending-card';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+interface SyncProgress {
+  emailsProcessed?: number;
+  reportsFound?: number;
+  errors?: number;
+  startedAt?: string;
+  completedAt?: string;
+  failedAt?: string;
+  error?: string;
+  lastBatchAt?: string;
 }
 
 async function getOrgAndCheckAccess(slug: string, userId: string) {
@@ -35,7 +45,16 @@ async function getOrgAndCheckAccess(slug: string, userId: string) {
 
 async function getGmailAccounts(orgId: string) {
   return db
-    .select()
+    .select({
+      id: gmailAccounts.id,
+      email: gmailAccounts.email,
+      syncEnabled: gmailAccounts.syncEnabled,
+      sendEnabled: gmailAccounts.sendEnabled,
+      lastSyncAt: gmailAccounts.lastSyncAt,
+      createdAt: gmailAccounts.createdAt,
+      syncStatus: gmailAccounts.syncStatus,
+      syncProgress: gmailAccounts.syncProgress,
+    })
     .from(gmailAccounts)
     .where(eq(gmailAccounts.organizationId, orgId))
     .orderBy(gmailAccounts.email);
@@ -135,16 +154,14 @@ export default async function GmailSettingsPage({ params }: PageProps) {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              {accounts.map((account) => (
-                <GmailAccountCard
-                  key={account.id}
-                  account={account}
-                  orgSlug={slug}
-                  canManage={canManage}
-                />
-              ))}
-            </div>
+            <GmailAccountsList
+              initialAccounts={accounts.map((account) => ({
+                ...account,
+                syncProgress: account.syncProgress as SyncProgress | null,
+              }))}
+              orgSlug={slug}
+              canManage={canManage}
+            />
           )}
         </CardContent>
       </Card>

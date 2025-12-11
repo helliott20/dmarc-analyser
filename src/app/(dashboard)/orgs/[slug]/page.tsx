@@ -21,6 +21,10 @@ import {
   TrendingUp,
   Activity,
 } from 'lucide-react';
+import { SevenDaySummary } from '@/components/dashboard/seven-day-summary';
+import { TopSourcesTable } from '@/components/dashboard/top-sources-table';
+import { ThreatsByCountry } from '@/components/dashboard/threats-by-country';
+import { QuickStats } from '@/components/dashboard/quick-stats';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -156,6 +160,9 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         </Button>
       </div>
 
+      {/* Quick Stats - Alerts, Tasks, Issues */}
+      <QuickStats orgSlug={slug} />
+
       {/* Primary Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -207,55 +214,48 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         </Card>
       </div>
 
-      {/* Authentication Status */}
+      {/* 7 Day Summary and Top Sources */}
       <div className="grid gap-4 md:grid-cols-2">
+        <SevenDaySummary orgSlug={slug} />
+        <TopSourcesTable orgSlug={slug} />
+      </div>
+
+      {/* Threats by Country and Authentication Status */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <ThreatsByCountry orgSlug={slug} />
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              Passing Messages
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Shield className="h-4 w-4 text-primary" />
+              Authentication Status
             </CardTitle>
             <CardDescription>
-              Messages that passed DMARC authentication
+              30-day DMARC authentication results
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total Passed</span>
-                <span className="text-2xl font-bold text-success">
-                  {stats.passedMessages.toLocaleString()}
-                </span>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-success/10">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span className="text-sm font-medium">Passed</span>
               </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Percentage of total</span>
-                <span className="font-medium">{stats.passRate}%</span>
+              <div className="text-right">
+                <p className="text-lg font-bold text-success tabular-nums">
+                  {stats.passedMessages.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">{stats.passRate}%</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              Failed Messages
-            </CardTitle>
-            <CardDescription>
-              Messages that failed DMARC authentication
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total Failed</span>
-                <span className="text-2xl font-bold text-warning">
-                  {stats.failedMessages.toLocaleString()}
-                </span>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/10">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <span className="text-sm font-medium">Failed</span>
               </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Percentage of total</span>
-                <span className="font-medium">{100 - stats.passRate}%</span>
+              <div className="text-right">
+                <p className="text-lg font-bold text-destructive tabular-nums">
+                  {stats.failedMessages.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground tabular-nums">{100 - stats.passRate}%</p>
               </div>
             </div>
           </CardContent>

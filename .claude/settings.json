@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "backend-development@claude-code-workflows": true,
+    "full-stack-orchestration@claude-code-workflows": true
+  }
+}

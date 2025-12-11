@@ -23,29 +23,44 @@ interface Domain {
   verifiedAt: Date | null;
 }
 
+type MemberRole = 'owner' | 'admin' | 'member' | 'viewer';
+
 export default function DomainsPage() {
   const params = useParams();
   const orgSlug = params.slug as string;
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<MemberRole | null>(null);
+
+  // Check if user can manage domains (add/edit/delete)
+  const canManageDomains = userRole && ['owner', 'admin', 'member'].includes(userRole);
 
   useEffect(() => {
-    async function fetchDomains() {
+    async function fetchData() {
       try {
-        const response = await fetch(`/api/orgs/${orgSlug}/domains`);
-        if (response.ok) {
-          const data = await response.json();
-          // The API returns an array directly, not wrapped in an object
+        // Fetch domains and membership info in parallel
+        const [domainsRes, membershipRes] = await Promise.all([
+          fetch(`/api/orgs/${orgSlug}/domains`),
+          fetch(`/api/orgs/${orgSlug}/membership`),
+        ]);
+
+        if (domainsRes.ok) {
+          const data = await domainsRes.json();
           setDomains(Array.isArray(data) ? data : []);
         }
+
+        if (membershipRes.ok) {
+          const membershipData = await membershipRes.json();
+          setUserRole(membershipData.role);
+        }
       } catch (error) {
-        console.error('Failed to fetch domains:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchDomains();
+    fetchData();
   }, [orgSlug]);
 
   const verifiedCount = domains.filter((d) => d.verifiedAt).length;
@@ -60,13 +75,20 @@ export default function DomainsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CsvImportDialog orgSlug={orgSlug} />
-          <Button asChild>
-            <Link href={`/orgs/${orgSlug}/domains/new`}>
+          <CsvImportDialog orgSlug={orgSlug} disabled={!canManageDomains} />
+          {canManageDomains ? (
+            <Button asChild>
+              <Link href={`/orgs/${orgSlug}/domains/new`}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Domain
+              </Link>
+            </Button>
+          ) : (
+            <Button disabled title="You don't have permission to add domains">
               <Plus className="h-4 w-4 mr-2" />
               Add Domain
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -135,17 +157,24 @@ export default function DomainsPage() {
                 Add your first domain to start monitoring DMARC reports.
               </p>
               <div className="flex items-center justify-center gap-2">
-                <CsvImportDialog orgSlug={orgSlug} />
-                <Button asChild>
-                  <Link href={`/orgs/${orgSlug}/domains/new`}>
+                <CsvImportDialog orgSlug={orgSlug} disabled={!canManageDomains} />
+                {canManageDomains ? (
+                  <Button asChild>
+                    <Link href={`/orgs/${orgSlug}/domains/new`}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Domain
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button disabled title="You don't have permission to add domains">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Domain
-                  </Link>
-                </Button>
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
-            <DomainsList domains={domains} orgSlug={orgSlug} />
+            <DomainsList domains={domains} orgSlug={orgSlug} showVolumeBar />
           )}
         </CardContent>
       </Card>

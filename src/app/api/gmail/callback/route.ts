@@ -5,13 +5,17 @@ import { organizations, orgMembers, gmailAccounts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { exchangeCodeForTokens } from '@/lib/gmail';
 
+// Use NEXTAUTH_URL for redirects in production
+const getBaseUrl = () => process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
 export async function GET(request: Request) {
   try {
     const session = await auth();
     const { searchParams } = new URL(request.url);
+    const baseUrl = getBaseUrl();
 
     if (!session?.user?.id) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL('/login', baseUrl));
     }
 
     const code = searchParams.get('code');
@@ -23,26 +27,26 @@ export async function GET(request: Request) {
     try {
       stateData = JSON.parse(Buffer.from(state || '', 'base64').toString());
     } catch {
-      return NextResponse.redirect(new URL('/orgs?error=invalid_state', request.url));
+      return NextResponse.redirect(new URL('/orgs?error=invalid_state', baseUrl));
     }
 
     const { orgSlug } = stateData;
 
     if (error) {
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?error=${error}`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=${error}`, baseUrl)
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?error=missing_params`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=missing_params`, baseUrl)
       );
     }
 
     if (stateData.userId !== session.user.id) {
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?error=invalid_state`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=invalid_state`, baseUrl)
       );
     }
 
@@ -63,7 +67,7 @@ export async function GET(request: Request) {
 
     if (!membership || !['owner', 'admin'].includes(membership.role)) {
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?error=unauthorized`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=unauthorized`, baseUrl)
       );
     }
 
@@ -86,7 +90,7 @@ export async function GET(request: Request) {
 
     if (!email) {
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?error=no_email`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=no_email`, baseUrl)
       );
     }
 
@@ -104,7 +108,7 @@ export async function GET(request: Request) {
         .where(eq(gmailAccounts.id, stateData.accountId));
 
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_authorized`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_authorized`, baseUrl)
       );
     }
 
@@ -149,7 +153,7 @@ export async function GET(request: Request) {
       }
 
       return NextResponse.redirect(
-        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_account_added`, request.url)
+        new URL(`/orgs/${orgSlug}/settings/gmail?success=send_account_added`, baseUrl)
       );
     }
 
@@ -191,12 +195,12 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.redirect(
-      new URL(`/orgs/${orgSlug}/settings/gmail?success=true`, request.url)
+      new URL(`/orgs/${orgSlug}/settings/gmail?success=true`, baseUrl)
     );
   } catch (error) {
     console.error('Gmail callback error:', error);
     return NextResponse.redirect(
-      new URL('/orgs?error=gmail_callback_failed', request.url)
+      new URL('/orgs?error=gmail_callback_failed', getBaseUrl())
     );
   }
 }

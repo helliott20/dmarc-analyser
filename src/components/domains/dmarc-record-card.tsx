@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 
 interface DmarcRecordCardProps {
   domain: string;
+  domainId: string;
+  orgSlug: string;
   dmarcRecord: string | null;
 }
 
@@ -131,7 +133,7 @@ function parseDmarcRecord(record: string): DmarcTag[] {
   return tags;
 }
 
-export function DmarcRecordCard({ domain, dmarcRecord }: DmarcRecordCardProps) {
+export function DmarcRecordCard({ domain, domainId, orgSlug, dmarcRecord }: DmarcRecordCardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [record, setRecord] = useState(dmarcRecord);
 
@@ -150,12 +152,20 @@ export function DmarcRecordCard({ domain, dmarcRecord }: DmarcRecordCardProps) {
   const refreshRecord = async () => {
     setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/dns/dmarc?domain=${domain}`);
+      // Use dns-refresh endpoint to also update cached database values
+      const response = await fetch(`/api/orgs/${orgSlug}/domains/${domainId}/dns-refresh`, {
+        method: 'POST',
+      });
       const data = await response.json();
-      if (data.record) {
-        setRecord(data.record);
-        toast.success('DMARC record refreshed');
+      if (data.dmarc?.record) {
+        setRecord(data.dmarc.record);
+        if (data.dmarc.changed) {
+          toast.success('DMARC record updated - changes detected!');
+        } else {
+          toast.success('DMARC record refreshed');
+        }
       } else {
+        setRecord(null);
         toast.error('No DMARC record found');
       }
     } catch {

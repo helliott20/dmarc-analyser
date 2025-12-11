@@ -5,7 +5,8 @@ import { db } from '@/db';
 import { organizations, orgMembers, domains } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, BarChart3 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChevronLeft, BarChart3, AlertTriangle } from 'lucide-react';
 import { TimelineCharts } from '@/components/domains/timeline-charts';
 import { ExportButton } from '@/components/export-button';
 
@@ -53,6 +54,38 @@ export default async function TimelinePage({ params }: PageProps) {
   }
 
   const { domain } = result;
+
+  // Check if domain is verified - show verification message if not
+  if (!domain.verifiedAt) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href={`/orgs/${slug}/domains/${domainId}`}>
+              <ChevronLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold tracking-tight">Timeline</h1>
+        </div>
+        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                  Domain verification required
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  You need to verify ownership of this domain before viewing timeline data.
+                  Go to the domain overview page to complete verification.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

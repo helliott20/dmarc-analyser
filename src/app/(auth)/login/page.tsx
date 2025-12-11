@@ -34,7 +34,7 @@ function LoginForm() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">DMARC Analyser</h1>
           <p className="text-muted-foreground mt-2">
-            Monitor and analyze your email authentication
+            Monitor and analyse your email authentication
           </p>
         </div>
 
@@ -48,7 +48,7 @@ function LoginForm() {
 
         {/* Sign in card */}
         <Card className="border-0 shadow-xl">
-          <CardHeader className="space-y-1 pb-4">
+          <CardHeader className="space-y-1 pb-4 text-center">
             <CardTitle className="text-xl">Sign in to your account</CardTitle>
             <CardDescription>
               Use your Google account to continue

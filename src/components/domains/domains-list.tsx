@@ -23,6 +23,7 @@ import {
   ShieldAlert,
   Loader2,
 } from 'lucide-react';
+import { VolumeBar } from '@/components/domains/volume-bar';
 
 interface Domain {
   id: string;
@@ -31,9 +32,19 @@ interface Domain {
   verifiedAt: Date | null;
 }
 
+interface DomainWithStats extends Domain {
+  isActive?: boolean;
+  totalMessages?: number;
+  passedMessages?: number;
+  failedMessages?: number;
+  passRate?: number;
+  volumePercent?: number;
+}
+
 interface DomainsListProps {
   domains: Domain[];
   orgSlug: string;
+  showVolumeBar?: boolean;
 }
 
 interface DnsStatus {
@@ -173,9 +184,37 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
   );
 }
 
-export function DomainsList({ domains, orgSlug }: DomainsListProps) {
+export function DomainsList({ domains, orgSlug, showVolumeBar = false }: DomainsListProps) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [domainStats, setDomainStats] = useState<Map<string, DomainWithStats>>(new Map());
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  // Fetch domain stats if showVolumeBar is enabled
+  useEffect(() => {
+    if (!showVolumeBar) return;
+
+    async function fetchStats() {
+      setStatsLoading(true);
+      try {
+        const res = await fetch(`/api/orgs/${orgSlug}/domains/stats`);
+        if (res.ok) {
+          const data = await res.json();
+          const statsMap = new Map<string, DomainWithStats>();
+          for (const domain of data.domains) {
+            statsMap.set(domain.id, domain);
+          }
+          setDomainStats(statsMap);
+        }
+      } catch (error) {
+        console.error('Failed to fetch domain stats:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, [orgSlug, showVolumeBar]);
 
   const filteredDomains = useMemo(() => {
     if (!search.trim()) return domains;
@@ -216,39 +255,61 @@ export function DomainsList({ domains, orgSlug }: DomainsListProps) {
 
       {/* List */}
       <div className="divide-y">
-        {paginatedDomains.map((domain) => (
-          <Link
-            key={domain.id}
-            href={`/orgs/${orgSlug}/domains/${domain.id}`}
-            className="flex items-center justify-between py-4 hover:bg-muted/50 -mx-4 px-4 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Globe className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">{domain.domain}</p>
-                {domain.displayName && domain.displayName !== domain.domain && (
-                  <p className="text-sm text-muted-foreground">
-                    {domain.displayName}
-                  </p>
+        {paginatedDomains.map((domain) => {
+          const stats = domainStats.get(domain.id);
+
+          return (
+            <Link
+              key={domain.id}
+              href={`/orgs/${orgSlug}/domains/${domain.id}`}
+              className="flex items-center justify-between py-4 hover:bg-muted/50 -mx-4 px-4 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{domain.domain}</p>
+                  {domain.displayName && domain.displayName !== domain.domain && (
+                    <p className="text-sm text-muted-foreground">
+                      {domain.displayName}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <DnsStatusBadges domainId={domain.id} orgSlug={orgSlug} />
+                {/* Volume Bar - after record status */}
+                {showVolumeBar && (
+                  <div className="hidden md:block">
+                    {statsLoading ? (
+                      <div className="w-32 h-3 bg-muted rounded-full animate-pulse" />
+                    ) : stats ? (
+                      <VolumeBar
+                        volumePercent={stats.volumePercent || 0}
+                        totalMessages={stats.totalMessages || 0}
+                        passedMessages={stats.passedMessages || 0}
+                        failedMessages={stats.failedMessages || 0}
+                        passRate={stats.passRate || 0}
+                      />
+                    ) : (
+                      <div className="w-32 h-3 bg-muted/30 rounded-full" />
+                    )}
+                  </div>
+                )}
+                {domain.verifiedAt ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Verified
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1 text-warning">
+                    <Clock className="h-3 w-3" />
+                    Pending
+                  </Badge>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <DnsStatusBadges domainId={domain.id} orgSlug={orgSlug} />
-              {domain.verifiedAt ? (
-                <Badge variant="secondary" className="gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Verified
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="gap-1 text-warning">
-                  <Clock className="h-3 w-3" />
-                  Pending
-                </Badge>
-              )}
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Empty State */}

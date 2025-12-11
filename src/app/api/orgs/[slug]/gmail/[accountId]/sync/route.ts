@@ -175,7 +175,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       console.error('Failed to create label:', error);
     }
 
-    console.log(`Processing ${messageIds.length} messages for domains:`, Array.from(domainMap.keys()));
+    console.log(`[Gmail Sync] Processing ${messageIds.length} messages for domains:`, Array.from(domainMap.keys()));
 
     // Mark sync as started
     await db
@@ -187,81 +187,99 @@ export async function POST(request: Request, { params }: RouteParams) {
       })
       .where(eq(gmailAccounts.id, accountId));
 
-    // Process messages in parallel (5 at a time to avoid rate limits)
-    const CONCURRENCY = 5;
-    for (let i = 0; i < messageIds.length; i += CONCURRENCY) {
-      const batch = messageIds.slice(i, i + CONCURRENCY);
+    // Process messages sequentially to avoid rate limits and improve reliability
+    const BATCH_SIZE = 3; // Smaller batches for better progress visibility
+    for (let i = 0; i < messageIds.length; i += BATCH_SIZE) {
+      const batch = messageIds.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+      console.log(`[Gmail Sync] Processing batch ${batchNum}, messages ${i + 1}-${Math.min(i + BATCH_SIZE, messageIds.length)}`);
 
       const results = await Promise.allSettled(
         batch.map(async (messageId) => {
-          const message = await getMessage(accessToken, messageId);
-          const attachments = extractDmarcAttachments(message);
+          try {
+            const message = await getMessage(accessToken, messageId);
+            const attachments = extractDmarcAttachments(message);
 
-          let batchImported = 0;
-          let batchSkipped = 0;
-          let batchErrors = 0;
-          let shouldArchive = false; // Only archive if we processed a tracked domain
+            let batchImported = 0;
+            let batchSkipped = 0;
+            let batchErrors = 0;
+            let shouldArchive = false;
 
-          for (const attachment of attachments) {
-            if (!attachment.body.attachmentId) continue;
+            for (const attachment of attachments) {
+              if (!attachment.body.attachmentId) continue;
 
-            try {
-              const attachmentData = await getAttachment(
-                accessToken,
-                messageId,
-                attachment.body.attachmentId
-              );
+              try {
+                const attachmentData = await getAttachment(
+                  accessToken,
+                  messageId,
+                  attachment.body.attachmentId
+                );
 
-              const xml = await extractXmlFromAttachment(
-                attachmentData,
-                attachment.filename || 'report.xml'
-              );
+                const xml = await extractXmlFromAttachment(
+                  attachmentData,
+                  attachment.filename || 'report.xml'
+                );
 
-              if (!xml) continue;
-
-              const domainMatch = xml.match(/<policy_published>[\s\S]*?<domain>([^<]+)<\/domain>/);
-              if (!domainMatch) continue;
-
-              const reportDomain = domainMatch[1].toLowerCase();
-              const domainId = domainMap.get(reportDomain);
-
-              if (!domainId) {
-                // Domain not tracked - don't archive, leave in inbox for later
-                batchSkipped++;
-                continue;
-              }
-
-              const importResult = await importDmarcReportFromXml(
-                xml,
-                domainId,
-                messageId
-              );
-
-              if (importResult.success) {
-                shouldArchive = true; // We processed this, so archive it
-                if (importResult.skipped) {
-                  batchSkipped++;
-                } else {
-                  batchImported++;
+                if (!xml) {
+                  console.log(`[Gmail Sync] Could not extract XML from ${attachment.filename}`);
+                  continue;
                 }
-              } else {
+
+                const domainMatch = xml.match(/<policy_published>[\s\S]*?<domain>([^<]+)<\/domain>/);
+                if (!domainMatch) {
+                  console.log(`[Gmail Sync] No domain found in XML from ${attachment.filename}`);
+                  continue;
+                }
+
+                const reportDomain = domainMatch[1].toLowerCase();
+                const domainId = domainMap.get(reportDomain);
+
+                if (!domainId) {
+                  console.log(`[Gmail Sync] Domain ${reportDomain} not tracked, skipping`);
+                  batchSkipped++;
+                  continue;
+                }
+
+                const importResult = await importDmarcReportFromXml(
+                  xml,
+                  domainId,
+                  messageId
+                );
+
+                if (importResult.success) {
+                  shouldArchive = true;
+                  if (importResult.skipped) {
+                    console.log(`[Gmail Sync] Report already imported: ${importResult.skipReason}`);
+                    batchSkipped++;
+                  } else {
+                    console.log(`[Gmail Sync] Imported report for ${reportDomain}`);
+                    batchImported++;
+                  }
+                } else {
+                  console.error(`[Gmail Sync] Import failed: ${importResult.error}`);
+                  batchErrors++;
+                }
+              } catch (attachmentError) {
+                console.error(`[Gmail Sync] Attachment error:`, attachmentError);
                 batchErrors++;
               }
-            } catch {
-              batchErrors++;
             }
-          }
 
-          // Only archive if we successfully processed a report for a tracked domain
-          if (shouldArchive) {
-            try {
-              await archiveMessage(accessToken, messageId, labelId || undefined);
-            } catch {
-              // Ignore archive errors
+            // Only archive if we successfully processed a report
+            if (shouldArchive) {
+              try {
+                await archiveMessage(accessToken, messageId, labelId || undefined);
+              } catch (archiveError) {
+                console.warn(`[Gmail Sync] Archive failed:`, archiveError);
+              }
             }
-          }
 
-          return { imported: batchImported, skipped: batchSkipped, errors: batchErrors };
+            return { imported: batchImported, skipped: batchSkipped, errors: batchErrors };
+          } catch (messageError) {
+            console.error(`[Gmail Sync] Message ${messageId} error:`, messageError);
+            return { imported: 0, skipped: 0, errors: 1 };
+          }
         })
       );
 
@@ -272,9 +290,13 @@ export async function POST(request: Request, { params }: RouteParams) {
           skipped += result.value.skipped;
           errors += result.value.errors;
         } else {
+          console.error(`[Gmail Sync] Promise rejected:`, result.reason);
           errors++;
         }
       }
+
+      const currentBatch = Math.ceil((i + BATCH_SIZE) / BATCH_SIZE);
+      console.log(`[Gmail Sync] Batch ${currentBatch} complete: ${imported} imported, ${skipped} skipped, ${errors} errors`);
 
       // Update progress in database after each batch
       await db
@@ -284,10 +306,15 @@ export async function POST(request: Request, { params }: RouteParams) {
             imported,
             skipped,
             errors,
-            batchesProcessed: Math.ceil((i + CONCURRENCY) / CONCURRENCY)
+            batchesProcessed: currentBatch
           },
         })
         .where(eq(gmailAccounts.id, accountId));
+
+      // Small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < messageIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
     }
 
     // Update last sync time and mark as complete if no more pages
@@ -299,6 +326,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         ...(hasMore ? {} : { syncStatus: 'idle' }), // Only mark idle when fully done
       })
       .where(eq(gmailAccounts.id, accountId));
+
+    console.log(`[Gmail Sync] Batch complete: ${imported} imported, ${skipped} skipped, ${errors} errors, hasMore: ${hasMore}`);
 
     return NextResponse.json({
       imported,

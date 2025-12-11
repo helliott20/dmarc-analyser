@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 
 interface CsvImportDialogProps {
   orgSlug: string;
+  disabled?: boolean;
 }
 
 interface ImportResult {
@@ -30,7 +31,7 @@ interface ImportResult {
   message: string;
 }
 
-export function CsvImportDialog({ orgSlug }: CsvImportDialogProps) {
+export function CsvImportDialog({ orgSlug, disabled }: CsvImportDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [domains, setDomains] = useState('');
@@ -107,7 +108,7 @@ export function CsvImportDialog({ orgSlug }: CsvImportDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={disabled} title={disabled ? "You don't have permission to import domains" : undefined}>
           <Upload className="h-4 w-4 mr-2" />
           Import CSV
         </Button>

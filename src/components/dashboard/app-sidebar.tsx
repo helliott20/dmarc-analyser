@@ -440,6 +440,19 @@ export function AppSidebar({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                  {canManageSettings && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/jobs`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/jobs`}>
+                          <Activity className="h-4 w-4" />
+                          <span>Background Jobs</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

@@ -1,9 +1,12 @@
 CREATE TYPE "public"."alert_severity" AS ENUM('info', 'warning', 'critical');--> statement-breakpoint
-CREATE TYPE "public"."alert_type" AS ENUM('new_source', 'auth_failure_spike', 'policy_change', 'compliance_drop', 'dns_change');--> statement-breakpoint
+CREATE TYPE "public"."alert_type" AS ENUM('pass_rate_drop', 'new_source', 'dmarc_failure_spike', 'dns_change', 'auth_failure_spike', 'policy_change', 'compliance_drop');--> statement-breakpoint
 CREATE TYPE "public"."alignment_mode" AS ENUM('r', 's');--> statement-breakpoint
 CREATE TYPE "public"."disposition" AS ENUM('none', 'quarantine', 'reject');--> statement-breakpoint
 CREATE TYPE "public"."dkim_result" AS ENUM('none', 'pass', 'fail', 'policy', 'neutral', 'temperror', 'permerror');--> statement-breakpoint
 CREATE TYPE "public"."dmarc_result" AS ENUM('pass', 'fail');--> statement-breakpoint
+CREATE TYPE "public"."export_status" AS ENUM('pending', 'processing', 'complete', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."export_type" AS ENUM('reports', 'sources', 'timeline', 'all');--> statement-breakpoint
+CREATE TYPE "public"."feedback_type" AS ENUM('auth-failure', 'fraud', 'abuse', 'not-spam', 'virus', 'other');--> statement-breakpoint
 CREATE TYPE "public"."member_role" AS ENUM('owner', 'admin', 'member', 'viewer');--> statement-breakpoint
 CREATE TYPE "public"."policy" AS ENUM('none', 'quarantine', 'reject');--> statement-breakpoint
 CREATE TYPE "public"."source_type" AS ENUM('legitimate', 'suspicious', 'unknown', 'forwarded');--> statement-breakpoint
@@ -24,6 +27,20 @@ CREATE TABLE "accounts" (
 	"session_state" varchar(255)
 );
 --> statement-breakpoint
+CREATE TABLE "alert_rules" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"domain_id" uuid,
+	"type" "alert_type" NOT NULL,
+	"threshold" jsonb,
+	"is_enabled" boolean DEFAULT true NOT NULL,
+	"notify_email" boolean DEFAULT true NOT NULL,
+	"notify_webhook" boolean DEFAULT false NOT NULL,
+	"created_by" uuid NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "alerts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -36,6 +53,9 @@ CREATE TABLE "alerts" (
 	"is_read" boolean DEFAULT false NOT NULL,
 	"read_by" uuid,
 	"read_at" timestamp,
+	"is_dismissed" boolean DEFAULT false NOT NULL,
+	"dismissed_by" uuid,
+	"dismissed_at" timestamp,
 	"email_sent" boolean DEFAULT false NOT NULL,
 	"webhook_sent" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
@@ -44,14 +64,14 @@ CREATE TABLE "alerts" (
 CREATE TABLE "api_keys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
-	"name" varchar(100) NOT NULL,
-	"key_hash" varchar(255) NOT NULL,
-	"key_prefix" varchar(10) NOT NULL,
-	"scopes" jsonb DEFAULT '["read"]'::jsonb NOT NULL,
-	"created_by" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"key_prefix" varchar(8) NOT NULL,
+	"key_hash" varchar(64) NOT NULL,
+	"scopes" text NOT NULL,
 	"last_used_at" timestamp,
 	"expires_at" timestamp,
-	"revoked_at" timestamp,
+	"is_active" boolean DEFAULT true,
+	"created_by" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -67,6 +87,22 @@ CREATE TABLE "audit_logs" (
 	"ip_address" varchar(45),
 	"user_agent" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "data_exports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"type" "export_type" NOT NULL,
+	"status" "export_status" DEFAULT 'pending' NOT NULL,
+	"filters" jsonb,
+	"file_url" text,
+	"file_size" integer,
+	"record_count" integer,
+	"error" text,
+	"created_by" uuid,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"completed_at" timestamp,
+	"expires_at" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "dkim_results" (
@@ -98,14 +134,16 @@ CREATE TABLE "domains" (
 CREATE TABLE "forensic_reports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"domain_id" uuid NOT NULL,
-	"feedback_type" varchar(50),
+	"report_id" varchar(255),
+	"feedback_type" "feedback_type",
+	"reporter_org_name" varchar(255),
 	"user_agent" varchar(255),
 	"version" varchar(10),
 	"original_mail_from" varchar(255),
 	"original_rcpt_to" varchar(255),
 	"arrival_date" timestamp,
 	"source_ip" "inet",
-	"auth_results" text,
+	"auth_results" jsonb,
 	"delivery_result" varchar(50),
 	"dkim_domain" varchar(255),
 	"dkim_result" "dkim_result",
@@ -116,7 +154,8 @@ CREATE TABLE "forensic_reports" (
 	"raw_report" text,
 	"gmail_message_id" varchar(100),
 	"imported_at" timestamp DEFAULT now() NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "gmail_accounts" (
@@ -128,7 +167,11 @@ CREATE TABLE "gmail_accounts" (
 	"token_expiry" timestamp,
 	"last_sync_at" timestamp,
 	"sync_enabled" boolean DEFAULT true NOT NULL,
+	"send_enabled" boolean DEFAULT false NOT NULL,
 	"archive_label_id" varchar(100),
+	"sync_status" varchar(20) DEFAULT 'idle',
+	"sync_progress" jsonb,
+	"sync_started_at" timestamp,
 	"added_by" uuid NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -228,27 +271,28 @@ CREATE TABLE "scheduled_reports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"domain_id" uuid,
-	"name" varchar(100) NOT NULL,
+	"name" varchar(255) NOT NULL,
 	"frequency" varchar(20) NOT NULL,
-	"recipients" jsonb NOT NULL,
-	"next_run_at" timestamp NOT NULL,
-	"last_run_at" timestamp,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_by" uuid NOT NULL,
+	"day_of_week" integer,
+	"day_of_month" integer,
+	"hour" integer DEFAULT 9 NOT NULL,
+	"timezone" varchar(50) DEFAULT 'UTC',
+	"recipients" text NOT NULL,
+	"include_charts" boolean DEFAULT true,
+	"include_sources" boolean DEFAULT true,
+	"include_failures" boolean DEFAULT true,
+	"last_sent_at" timestamp,
+	"next_run_at" timestamp,
+	"is_active" boolean DEFAULT true,
+	"created_by" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"session_token" varchar(255) NOT NULL,
+	"session_token" varchar(255) PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
-	"expires" timestamp NOT NULL,
-	"ip_address" varchar(45),
-	"user_agent" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"last_active_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "sessions_session_token_unique" UNIQUE("session_token")
+	"expires" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "sources" (
@@ -293,13 +337,29 @@ CREATE TABLE "subdomains" (
 	"first_seen" timestamp DEFAULT now() NOT NULL,
 	"last_seen" timestamp DEFAULT now() NOT NULL,
 	"message_count" bigint DEFAULT 0 NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"pass_count" bigint DEFAULT 0 NOT NULL,
+	"fail_count" bigint DEFAULT 0 NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "user_preferences" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"email_login_alerts" boolean DEFAULT true NOT NULL,
+	"email_weekly_digest" boolean DEFAULT true NOT NULL,
+	"email_alert_notifications" boolean DEFAULT true NOT NULL,
+	"theme" varchar(20) DEFAULT 'system' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "user_preferences_user_id_unique" UNIQUE("user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"name" varchar(255),
+	"email_verified" timestamp,
 	"image" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -316,9 +376,13 @@ CREATE TABLE "verification_tokens" (
 CREATE TABLE "webhooks" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"type" varchar(20) NOT NULL,
 	"url" text NOT NULL,
-	"secret" varchar(255) NOT NULL,
-	"events" jsonb NOT NULL,
+	"secret" varchar(64),
+	"events" text NOT NULL,
+	"severity_filter" text,
+	"domain_filter" uuid,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"last_triggered_at" timestamp,
 	"failure_count" integer DEFAULT 0 NOT NULL,
@@ -328,13 +392,19 @@ CREATE TABLE "webhooks" (
 );
 --> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alerts" ADD CONSTRAINT "alerts_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alerts" ADD CONSTRAINT "alerts_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alerts" ADD CONSTRAINT "alerts_read_by_users_id_fk" FOREIGN KEY ("read_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "alerts" ADD CONSTRAINT "alerts_dismissed_by_users_id_fk" FOREIGN KEY ("dismissed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "data_exports" ADD CONSTRAINT "data_exports_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "data_exports" ADD CONSTRAINT "data_exports_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dkim_results" ADD CONSTRAINT "dkim_results_record_id_records_id_fk" FOREIGN KEY ("record_id") REFERENCES "public"."records"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "domains" ADD CONSTRAINT "domains_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "domains" ADD CONSTRAINT "domains_verified_by_users_id_fk" FOREIGN KEY ("verified_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -359,9 +429,14 @@ ALTER TABLE "sources" ADD CONSTRAINT "sources_known_sender_id_known_senders_id_f
 ALTER TABLE "sources" ADD CONSTRAINT "sources_classified_by_users_id_fk" FOREIGN KEY ("classified_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "spf_results" ADD CONSTRAINT "spf_results_record_id_records_id_fk" FOREIGN KEY ("record_id") REFERENCES "public"."records"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subdomains" ADD CONSTRAINT "subdomains_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_domain_filter_domains_id_fk" FOREIGN KEY ("domain_filter") REFERENCES "public"."domains"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "accounts_provider_idx" ON "accounts" USING btree ("provider","provider_account_id");--> statement-breakpoint
+CREATE INDEX "alert_rules_org_idx" ON "alert_rules" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "alert_rules_domain_idx" ON "alert_rules" USING btree ("domain_id");--> statement-breakpoint
+CREATE INDEX "alert_rules_enabled_idx" ON "alert_rules" USING btree ("is_enabled");--> statement-breakpoint
 CREATE INDEX "alerts_org_unread_idx" ON "alerts" USING btree ("organization_id","is_read");--> statement-breakpoint
 CREATE INDEX "alerts_domain_idx" ON "alerts" USING btree ("domain_id");--> statement-breakpoint
 CREATE INDEX "alerts_created_idx" ON "alerts" USING btree ("created_at");--> statement-breakpoint
@@ -371,10 +446,15 @@ CREATE INDEX "audit_logs_org_idx" ON "audit_logs" USING btree ("organization_id"
 CREATE INDEX "audit_logs_user_idx" ON "audit_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs" USING btree ("action");--> statement-breakpoint
 CREATE INDEX "audit_logs_created_idx" ON "audit_logs" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "data_exports_org_idx" ON "data_exports" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "data_exports_status_idx" ON "data_exports" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "data_exports_created_idx" ON "data_exports" USING btree ("created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "domains_org_domain_idx" ON "domains" USING btree ("organization_id","domain");--> statement-breakpoint
 CREATE INDEX "domains_domain_idx" ON "domains" USING btree ("domain");--> statement-breakpoint
 CREATE INDEX "forensic_reports_domain_idx" ON "forensic_reports" USING btree ("domain_id");--> statement-breakpoint
 CREATE INDEX "forensic_reports_arrival_idx" ON "forensic_reports" USING btree ("arrival_date");--> statement-breakpoint
+CREATE INDEX "forensic_reports_source_ip_idx" ON "forensic_reports" USING btree ("source_ip");--> statement-breakpoint
+CREATE INDEX "forensic_reports_feedback_type_idx" ON "forensic_reports" USING btree ("feedback_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "gmail_accounts_org_email_idx" ON "gmail_accounts" USING btree ("organization_id","email");--> statement-breakpoint
 CREATE INDEX "invitations_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "invitations_token_idx" ON "invitations" USING btree ("token");--> statement-breakpoint
@@ -391,6 +471,7 @@ CREATE INDEX "scheduled_reports_next_run_idx" ON "scheduled_reports" USING btree
 CREATE UNIQUE INDEX "sources_domain_ip_idx" ON "sources" USING btree ("domain_id","source_ip");--> statement-breakpoint
 CREATE INDEX "sources_type_idx" ON "sources" USING btree ("source_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "subdomains_domain_sub_idx" ON "subdomains" USING btree ("domain_id","subdomain");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_preferences_user_idx" ON "user_preferences" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_idx" ON "users" USING btree ("email");--> statement-breakpoint
 CREATE UNIQUE INDEX "verification_tokens_idx" ON "verification_tokens" USING btree ("identifier","token");--> statement-breakpoint
 CREATE INDEX "webhooks_org_idx" ON "webhooks" USING btree ("organization_id");
