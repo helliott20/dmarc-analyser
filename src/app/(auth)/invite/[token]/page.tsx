@@ -1,4 +1,7 @@
 import { auth } from '@/lib/auth';
+import { db } from '@/db';
+import { invitations, organizations } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { InvitationAcceptClient } from '@/components/team/invitation-accept-client';
 
 interface PageProps {
@@ -7,19 +10,61 @@ interface PageProps {
 
 async function getInvitationData(token: string) {
   try {
-    // Use absolute URL for server-side fetch
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/invitations/${token}`, {
-      cache: 'no-store',
-    });
+    // Query database directly instead of fetching our own API
+    const [invitation] = await db
+      .select({
+        id: invitations.id,
+        email: invitations.email,
+        role: invitations.role,
+        expiresAt: invitations.expiresAt,
+        acceptedAt: invitations.acceptedAt,
+        organizationId: invitations.organizationId,
+      })
+      .from(invitations)
+      .where(eq(invitations.token, token))
+      .limit(1);
 
-    if (!response.ok) {
-      const error = await response.json();
-      return { data: null, error: error.error || 'Invalid invitation' };
+    if (!invitation) {
+      return { data: null, error: 'Invalid invitation' };
     }
 
-    const data = await response.json();
-    return { data, error: null };
+    if (invitation.acceptedAt) {
+      return { data: null, error: 'Invitation already accepted' };
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      return { data: null, error: 'Invitation expired' };
+    }
+
+    // Get organization details
+    const [organization] = await db
+      .select({
+        id: organizations.id,
+        name: organizations.name,
+        slug: organizations.slug,
+      })
+      .from(organizations)
+      .where(eq(organizations.id, invitation.organizationId))
+      .limit(1);
+
+    if (!organization) {
+      return { data: null, error: 'Organisation not found' };
+    }
+
+    return {
+      data: {
+        invitation: {
+          email: invitation.email,
+          role: invitation.role,
+          expiresAt: invitation.expiresAt.toISOString(),
+        },
+        organization: {
+          name: organization.name,
+          slug: organization.slug,
+        },
+      },
+      error: null,
+    };
   } catch (error) {
     console.error('Failed to fetch invitation:', error);
     return { data: null, error: 'Failed to load invitation' };
