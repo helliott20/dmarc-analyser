@@ -19,10 +19,14 @@ if (!process.env.DATABASE_URL) {
 
 console.log('[Workers] Environment loaded, DATABASE_URL:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':***@'));
 
+// Worker interface for graceful shutdown
+interface WorkerInstance {
+  close(): Promise<void>;
+}
+
 // Now import everything else AFTER env is loaded
 async function main() {
   // Dynamic imports to ensure env is loaded first
-  const { Worker } = await import('bullmq');
   const { createGmailSyncWorker } = await import('./gmail-sync.worker');
   const { createScheduledReportsWorker } = await import('./scheduled-reports.worker');
   const { createAlertsWorker } = await import('./alerts.worker');
@@ -34,8 +38,7 @@ async function main() {
 
   // Graceful shutdown handling
   let isShuttingDown = false;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workers: Worker<any, any, string>[] = [];
+  const workers: WorkerInstance[] = [];
 
   async function shutdown() {
     if (isShuttingDown) return;
@@ -53,13 +56,13 @@ async function main() {
   console.log('[Workers] Starting DMARC Analyser workers...');
 
   // Create all workers
-  workers.push(createGmailSyncWorker() as Worker<any, any, string>);
-  workers.push(createScheduledReportsWorker() as Worker<any, any, string>);
-  workers.push(createAlertsWorker() as Worker<any, any, string>);
-  workers.push(createWebhookDeliveryWorker() as Worker<any, any, string>);
-  workers.push(createCleanupWorker() as Worker<any, any, string>);
-  workers.push(createIpEnrichmentWorker() as Worker<any, any, string>);
-  workers.push(createDnsCheckWorker() as Worker<any, any, string>);
+  workers.push(createGmailSyncWorker());
+  workers.push(createScheduledReportsWorker());
+  workers.push(createAlertsWorker());
+  workers.push(createWebhookDeliveryWorker());
+  workers.push(createCleanupWorker());
+  workers.push(createIpEnrichmentWorker());
+  workers.push(createDnsCheckWorker());
 
   console.log(`[Workers] Started ${workers.length} workers:`);
   console.log('  - Gmail Sync (every 15 min)');
