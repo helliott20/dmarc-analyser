@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { invitations, organizations, orgMembers, auditLogs, users } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { sendWelcomeEmail } from '@/lib/email-service';
 
 export async function GET(
   request: Request,
@@ -177,6 +178,15 @@ export async function POST(
       newValue: { role: invitation.role, email: invitation.email },
       ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
       userAgent: request.headers.get('user-agent') || undefined,
+    });
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({
+      organizationId: invitation.organizationId,
+      userId: session.user.id,
+      role: invitation.role,
+    }).catch((error) => {
+      console.error('[Welcome] Error sending welcome email:', error);
     });
 
     return NextResponse.json({

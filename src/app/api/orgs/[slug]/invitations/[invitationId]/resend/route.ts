@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { organizations, orgMembers, invitations, auditLogs } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { canInviteMembers, generateInvitationToken, getInvitationExpiry, type MemberRole } from '@/lib/roles';
+import { sendInvitationEmail } from '@/lib/email-service';
 
 export async function POST(
   request: Request,
@@ -98,15 +99,22 @@ export async function POST(
       userAgent: request.headers.get('user-agent') || undefined,
     });
 
-    // TODO: Send invitation email
-    // The email should contain:
-    // - Organization name: orgAccess.organizationName
-    // - Role being offered: updatedInvitation.role
-    // - Invitation link: `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`
-    // - Expiration date: expiresAt
-    // - Inviter name: session.user.name
-    console.log('TODO: Resend invitation email to:', updatedInvitation.email);
-    console.log('Invitation link:', `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`);
+    // Send invitation email (non-blocking - don't fail if email fails)
+    sendInvitationEmail({
+      organizationId: orgAccess.organizationId,
+      inviterId: session.user.id,
+      recipientEmail: updatedInvitation.email,
+      role: updatedInvitation.role,
+      token,
+    }).then((result) => {
+      if (!result.success) {
+        console.warn(`[Invitation] Failed to resend email to ${updatedInvitation.email}:`, result.error);
+      } else {
+        console.log(`[Invitation] Resent email to ${updatedInvitation.email}`);
+      }
+    }).catch((error) => {
+      console.error(`[Invitation] Error resending email to ${updatedInvitation.email}:`, error);
+    });
 
     return NextResponse.json({
       success: true,
