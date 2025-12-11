@@ -20,6 +20,7 @@ async function getUserOrganizations(userId: string) {
       faviconUrl: organizations.faviconUrl,
       primaryColor: organizations.primaryColor,
       accentColor: organizations.accentColor,
+      role: orgMembers.role,
     })
     .from(orgMembers)
     .innerJoin(organizations, eq(orgMembers.organizationId, organizations.id))

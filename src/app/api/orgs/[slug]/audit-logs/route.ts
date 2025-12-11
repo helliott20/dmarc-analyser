@@ -39,6 +39,14 @@ export async function GET(request: Request, { params }: RouteParams) {
       );
     }
 
+    // Only owners and admins can view audit logs
+    if (!['owner', 'admin'].includes(membership.role)) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view audit logs' },
+        { status: 403 }
+      );
+    }
+
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');

@@ -38,6 +38,14 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
+    // Only owners and admins can view pending invitations
+    if (!['owner', 'admin'].includes(orgAccess.role)) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view invitations' },
+        { status: 403 }
+      );
+    }
+
     // Get all pending invitations (not accepted and not expired)
     const now = new Date();
     const pendingInvitations = await db

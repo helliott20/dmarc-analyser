@@ -50,7 +50,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { organization } = result;
+    const { organization, role } = result;
+
+    // Only owners and admins can create exports
+    if (!['owner', 'admin'].includes(role)) {
+      return new Response(
+        JSON.stringify({ error: 'You do not have permission to create exports' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Parse request body
     const body = await request.json();
@@ -130,7 +138,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { organization } = result;
+    const { organization, role } = result;
+
+    // Only owners and admins can view exports
+    if (!['owner', 'admin'].includes(role)) {
+      return new Response(
+        JSON.stringify({ error: 'You do not have permission to view exports' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get recent exports (last 30 days)
     const thirtyDaysAgo = new Date();

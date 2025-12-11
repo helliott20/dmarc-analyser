@@ -53,6 +53,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut, useSession } from 'next-auth/react';
 import { UnreadAlertsBadge } from '@/components/alerts/unread-alerts-badge';
 
+type MemberRole = 'owner' | 'admin' | 'member' | 'viewer';
+
 interface Organization {
   id: string;
   name: string;
@@ -60,6 +62,7 @@ interface Organization {
   logoUrl?: string | null;
   primaryColor?: string | null;
   accentColor?: string | null;
+  role?: MemberRole | null;
 }
 
 interface AppSidebarProps {
@@ -79,6 +82,19 @@ export function AppSidebar({
   // Use URL param slug, or fall back to currentOrg slug
   const orgSlug = (params?.slug as string) || currentOrg?.slug;
   const domainId = params?.domainId as string;
+
+  // Get the current org from the list based on URL slug
+  const activeOrg = organizations.find((o) => o.slug === orgSlug) || currentOrg;
+  const userRole = activeOrg?.role || 'viewer';
+
+  // Permission checks based on role
+  const canManageSettings = ['owner', 'admin'].includes(userRole);
+  const canManageTeam = ['owner', 'admin'].includes(userRole);
+  const canManageGmail = ['owner', 'admin'].includes(userRole);
+  const canManageWebhooks = ['owner', 'admin'].includes(userRole);
+  const canManageApiKeys = ['owner', 'admin'].includes(userRole);
+  const canViewAuditLogs = ['owner', 'admin'].includes(userRole);
+  const canManageData = ['owner', 'admin'].includes(userRole);
 
   // Extract domain info from the URL if we're on a domain page
   const isDomainPage = domainId && pathname?.includes(`/domains/${domainId}`);
@@ -298,39 +314,45 @@ export function AppSidebar({
               <SidebarGroupLabel>Settings</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings`}>
-                        <Settings className="h-4 w-4" />
-                        <span>General</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/team`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/team`}>
-                        <Users className="h-4 w-4" />
-                        <span>Team</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/gmail`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/gmail`}>
-                        <Mail className="h-4 w-4" />
-                        <span>Gmail</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {canManageSettings && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings`}>
+                          <Settings className="h-4 w-4" />
+                          <span>General</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageTeam && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/team`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/team`}>
+                          <Users className="h-4 w-4" />
+                          <span>Team</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageGmail && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/gmail`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/gmail`}>
+                          <Mail className="h-4 w-4" />
+                          <span>Gmail</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -342,28 +364,32 @@ export function AppSidebar({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/alerts`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/alerts`}>
-                        <Bell className="h-4 w-4" />
-                        <span>Alert Rules</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/webhooks`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/webhooks`}>
-                        <Webhook className="h-4 w-4" />
-                        <span>Webhooks</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {canManageSettings && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/alerts`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/alerts`}>
+                          <Bell className="h-4 w-4" />
+                          <span>Alert Rules</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageWebhooks && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/webhooks`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/webhooks`}>
+                          <Webhook className="h-4 w-4" />
+                          <span>Webhooks</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
@@ -375,39 +401,45 @@ export function AppSidebar({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/api-keys`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/api-keys`}>
-                        <Server className="h-4 w-4" />
-                        <span>API Keys</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/audit-log`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/audit-log`}>
-                        <FileText className="h-4 w-4" />
-                        <span>Audit Log</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(`/orgs/${orgSlug}/settings/data`)}
-                    >
-                      <Link href={`/orgs/${orgSlug}/settings/data`}>
-                        <Database className="h-4 w-4" />
-                        <span>Data & Export</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {canManageApiKeys && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/api-keys`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/api-keys`}>
+                          <Server className="h-4 w-4" />
+                          <span>API Keys</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canViewAuditLogs && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/audit-log`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/audit-log`}>
+                          <FileText className="h-4 w-4" />
+                          <span>Audit Log</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageData && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/data`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/data`}>
+                          <Database className="h-4 w-4" />
+                          <span>Data & Export</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

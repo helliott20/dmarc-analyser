@@ -54,6 +54,90 @@ export function canChangeRoles(role: MemberRole): boolean {
 }
 
 /**
+ * Check if a user can view audit logs
+ */
+export function canViewAuditLogs(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage exports
+ */
+export function canManageExports(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage organisation settings
+ */
+export function canManageSettings(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage domains (add/edit/delete)
+ */
+export function canManageDomains(role: MemberRole): boolean {
+  return ['owner', 'admin', 'member'].includes(role);
+}
+
+/**
+ * Check if a user can manage webhooks
+ */
+export function canManageWebhooks(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage API keys
+ */
+export function canManageApiKeys(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage alert rules
+ */
+export function canManageAlertRules(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can manage Gmail accounts
+ */
+export function canManageGmail(role: MemberRole): boolean {
+  return ['owner', 'admin'].includes(role);
+}
+
+/**
+ * Check if a user can delete the organisation
+ */
+export function canDeleteOrganisation(role: MemberRole): boolean {
+  return role === 'owner';
+}
+
+/**
+ * Get all permissions for a role (useful for UI)
+ */
+export function getPermissions(role: MemberRole) {
+  return {
+    canInviteMembers: canInviteMembers(role),
+    canRemoveMembers: canRemoveMembers(role),
+    canChangeRoles: canChangeRoles(role),
+    canViewAuditLogs: canViewAuditLogs(role),
+    canManageExports: canManageExports(role),
+    canManageSettings: canManageSettings(role),
+    canManageDomains: canManageDomains(role),
+    canManageWebhooks: canManageWebhooks(role),
+    canManageApiKeys: canManageApiKeys(role),
+    canManageAlertRules: canManageAlertRules(role),
+    canManageGmail: canManageGmail(role),
+    canDeleteOrganisation: canDeleteOrganisation(role),
+    assignableRoles: getAssignableRoles(role),
+  };
+}
+
+/**
  * Get all roles that a given role can assign
  */
 export function getAssignableRoles(role: MemberRole): MemberRole[] {
