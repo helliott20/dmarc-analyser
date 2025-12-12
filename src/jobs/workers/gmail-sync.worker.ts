@@ -254,25 +254,45 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
         }
       };
 
-      // Process batch with concurrency
-      const batchResults = await processWithConcurrency(
-        searchResult.messageIds,
-        processMessage,
-        CONCURRENCY
-      );
-
-      // Aggregate results
+      // Process emails sequentially and update DB every 10 emails
       let batchNewReports = 0;
-      for (const r of batchResults) {
+      let emailsInBatch = 0;
+
+      for (const messageId of searchResult.messageIds) {
+        // Check if cancelled
+        if (await isCancelled(gmailAccountId)) {
+          console.log(`[Gmail Sync] Sync cancelled for account ${gmailAccountId}`);
+          return result;
+        }
+
+        const r = await processMessage(messageId);
         result.emailsProcessed += r.processed;
         result.reportsFound += r.reports;
         batchNewReports += r.reports;
+        emailsInBatch++;
+
+        // Update database every 10 emails for live UI updates
+        if (emailsInBatch % 10 === 0) {
+          await db
+            .update(gmailAccounts)
+            .set({
+              syncStatus: 'syncing',
+              syncProgress: {
+                emailsProcessed: result.emailsProcessed,
+                reportsFound: result.reportsFound,
+                errors: result.errors.length,
+                lastBatchAt: new Date().toISOString(),
+              },
+              updatedAt: new Date(),
+            })
+            .where(eq(gmailAccounts.id, gmailAccountId));
+        }
       }
 
       // Log batch summary
       console.log(`[Gmail Sync] Batch: ${searchResult.messageIds.length} emails | New: ${batchNewReports} | Skipped (already in DB): ${skippedReports} | No attachments: ${noAttachments} | Domain mismatch: ${domainMismatch}`);
 
-      // Update progress after each batch
+      // Update progress after batch
       await job.updateProgress({
         emailsProcessed: result.emailsProcessed,
         reportsFound: result.reportsFound,
@@ -281,13 +301,7 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
       hasMore = searchResult.hasMore;
       pageToken = searchResult.nextPageToken;
 
-      // Check if cancelled before updating progress
-      if (await isCancelled(gmailAccountId)) {
-        console.log(`[Gmail Sync] Sync cancelled for account ${gmailAccountId}`);
-        return result; // Return current progress, don't update status (already set to idle by cancel)
-      }
-
-      // Update progress to database every batch for UI visibility
+      // Final DB update for this batch
       await db
         .update(gmailAccounts)
         .set({
