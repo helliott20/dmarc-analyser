@@ -15,6 +15,7 @@ import { Globe, Plus } from 'lucide-react';
 import { CsvImportDialog } from '@/components/domains/csv-import-dialog';
 import { DomainsList } from '@/components/domains/domains-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DiscoverDomainsCard } from '@/components/gmail/discover-domains-card';
 
 interface Domain {
   id: string;
@@ -91,6 +92,9 @@ export default function DomainsPage() {
           )}
         </div>
       </div>
+
+      {/* Discover Domains from Gmail */}
+      {canManageDomains && <DiscoverDomainsCard orgSlug={orgSlug} />}
 
       {/* Stats Summary */}
       <div className="grid gap-4 md:grid-cols-3">
