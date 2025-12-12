@@ -211,29 +211,49 @@ export async function searchDmarcEmails(
     params.set('pageToken', pageToken);
   }
 
-  const response = await fetch(
-    `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+  // Retry with backoff for rate limits
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.pow(2, attempt) * 1000; // 2s, 4s
+      console.log(`[Gmail] Retrying search after ${delay}ms (attempt ${attempt + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-  );
 
-  if (!response.ok) {
+    const response = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Gmail search found messages:', data.messages?.length || 0, 'hasMore:', !!data.nextPageToken);
+
+      return {
+        messageIds: (data.messages || []).map((m: { id: string }) => m.id),
+        nextPageToken: data.nextPageToken,
+        hasMore: !!data.nextPageToken,
+      };
+    }
+
+    if (response.status === 429) {
+      const error = await response.text();
+      console.warn('Gmail rate limited:', error);
+      lastError = new Error('Gmail rate limited');
+      continue; // Retry
+    }
+
+    // Non-retryable error
     const error = await response.text();
     console.error('Gmail search failed:', error);
     throw new Error('Failed to search Gmail');
   }
 
-  const data = await response.json();
-  console.log('Gmail search found messages:', data.messages?.length || 0, 'hasMore:', !!data.nextPageToken);
-
-  return {
-    messageIds: (data.messages || []).map((m: { id: string }) => m.id),
-    nextPageToken: data.nextPageToken,
-    hasMore: !!data.nextPageToken,
-  };
+  throw lastError || new Error('Failed to search Gmail after retries');
 }
 
 export async function getMessage(
