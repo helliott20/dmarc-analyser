@@ -35,8 +35,8 @@ export default function NewDomainPage({ params }: PageProps) {
       return;
     }
 
-    // Basic domain validation
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$/;
+    // Basic domain validation - supports multi-level TLDs like .co.uk, .sch.uk
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
     if (!domainRegex.test(domain.trim())) {
       toast.error('Please enter a valid domain (e.g., example.com)');
       return;

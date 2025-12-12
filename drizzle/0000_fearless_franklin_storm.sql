@@ -199,6 +199,8 @@ CREATE TABLE "known_senders" (
 	"website" varchar(255),
 	"ip_ranges" jsonb,
 	"dkim_domains" jsonb,
+	"spf_include" varchar(255),
+	"spf_resolved_at" timestamp,
 	"is_global" boolean DEFAULT true NOT NULL,
 	"organization_id" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,

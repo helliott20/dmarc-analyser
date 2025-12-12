@@ -20,8 +20,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // Validate domain format
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$/;
+    // Validate domain format - supports multi-level TLDs like .co.uk, .sch.uk
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
     if (!domainRegex.test(domain)) {
       return NextResponse.json(
         { error: 'Invalid domain format' },
