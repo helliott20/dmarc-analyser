@@ -391,6 +391,8 @@ export const knownSenders = pgTable('known_senders', {
   website: varchar('website', { length: 255 }),
   ipRanges: jsonb('ip_ranges'), // Array of CIDR ranges
   dkimDomains: jsonb('dkim_domains'), // Array of domains
+  spfInclude: varchar('spf_include', { length: 255 }), // SPF include domain (e.g., "_spf.google.com")
+  spfResolvedAt: timestamp('spf_resolved_at'), // When IPs were last resolved from SPF
   isGlobal: boolean('is_global').default(true).notNull(), // System-wide vs org-specific
   organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

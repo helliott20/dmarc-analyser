@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1765531239068,
-      "tag": "0000_normal_weapon_omega",
+      "when": 1765538199893,
+      "tag": "0000_dashing_reavers",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765542841456,
+      "tag": "0001_perfect_darkstar",
       "breakpoints": true
     }
   ]

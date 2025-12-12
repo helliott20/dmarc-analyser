@@ -99,7 +99,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { name, description, category, logoUrl, website, ipRanges, dkimDomains } = body;
+    const { name, description, category, logoUrl, website, ipRanges, dkimDomains, spfInclude } = body;
 
     if (!name || !category) {
       return NextResponse.json(
@@ -119,6 +119,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         website: website || null,
         ipRanges: ipRanges || null,
         dkimDomains: dkimDomains || null,
+        spfInclude: spfInclude || null,
         isGlobal: false,
         organizationId: membership.organization.id,
       })

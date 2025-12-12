@@ -129,7 +129,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { name, description, category, logoUrl, website, ipRanges, dkimDomains } = body;
+    const { name, description, category, logoUrl, website, ipRanges, dkimDomains, spfInclude } = body;
 
     const [updatedSender] = await db
       .update(knownSenders)
@@ -141,6 +141,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         website: website !== undefined ? website : sender.website,
         ipRanges: ipRanges !== undefined ? ipRanges : sender.ipRanges,
         dkimDomains: dkimDomains !== undefined ? dkimDomains : sender.dkimDomains,
+        spfInclude: spfInclude !== undefined ? spfInclude : sender.spfInclude,
         updatedAt: new Date(),
       })
       .where(eq(knownSenders.id, senderId))

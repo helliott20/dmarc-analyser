@@ -1,6 +1,6 @@
 {
-  "id": "ba2bad90-be70-4032-8e96-0998d0a83f75",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "1c91e0aa-8c6f-4cc8-b9e4-24d42d533084",
+  "prevId": "ba2bad90-be70-4032-8e96-0998d0a83f75",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1826,6 +1826,18 @@
         "dkim_domains": {
           "name": "dkim_domains",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spf_include": {
+          "name": "spf_include",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spf_resolved_at": {
+          "name": "spf_resolved_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },

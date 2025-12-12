@@ -40,6 +40,8 @@ interface KnownSender {
   website: string | null;
   ipRanges: string[] | null;
   dkimDomains: string[] | null;
+  spfInclude: string | null;
+  spfResolvedAt: Date | string | null;
   isGlobal: boolean;
   organizationId: string | null;
 }

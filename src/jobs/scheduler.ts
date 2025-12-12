@@ -191,6 +191,7 @@ export async function setupRepeatableJobs() {
   console.log('[Scheduler] Setting up repeatable jobs...');
 
   // Gmail sync - every 15 minutes
+  // Note: Don't use jobId with repeat - BullMQ creates its own keys for repeatable jobs
   await gmailSyncQueue.add(
     'gmail-sync-scheduler',
     { type: 'scheduled' },
@@ -198,9 +199,9 @@ export async function setupRepeatableJobs() {
       repeat: {
         pattern: '*/15 * * * *', // Every 15 minutes
       },
-      jobId: 'gmail-sync-scheduler',
     }
   );
+  console.log('[Scheduler] Added Gmail sync (every 15 min)');
 
   // DNS check - every 6 hours
   await dnsCheckQueue.add(
@@ -210,9 +211,9 @@ export async function setupRepeatableJobs() {
       repeat: {
         pattern: '0 */6 * * *', // Every 6 hours
       },
-      jobId: 'dns-check-scheduler',
     }
   );
+  console.log('[Scheduler] Added DNS check (every 6 hours)');
 
   // Scheduled reports - every hour (checks for due reports)
   await scheduledReportsQueue.add(
@@ -222,9 +223,9 @@ export async function setupRepeatableJobs() {
       repeat: {
         pattern: '0 * * * *', // Every hour
       },
-      jobId: 'scheduled-reports-scheduler',
     }
   );
+  console.log('[Scheduler] Added Scheduled reports (every hour)');
 
   // Cleanup - daily at 2am
   await cleanupQueue.add(
@@ -234,9 +235,9 @@ export async function setupRepeatableJobs() {
       repeat: {
         pattern: '0 2 * * *', // Daily at 2am
       },
-      jobId: 'cleanup-scheduler',
     }
   );
+  console.log('[Scheduler] Added Cleanup (daily at 2am)');
 
   console.log('[Scheduler] Repeatable jobs configured');
 }
