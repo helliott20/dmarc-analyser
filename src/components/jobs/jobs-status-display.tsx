@@ -92,6 +92,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
   const [data, setData] = useState<JobsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async (showRefreshIndicator = false) => {
@@ -150,6 +151,30 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
       toast.error('Failed to refresh job status');
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleClearGmailSync = async () => {
+    if (!confirm('Are you sure you want to clear the Gmail sync queue? This will stop any running syncs.')) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      const response = await fetch(`/api/orgs/${orgSlug}/jobs`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear Gmail sync queue');
+      }
+
+      toast.success('Gmail sync queue cleared');
+      fetchData(); // Refresh the data
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to clear queue');
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -446,11 +471,27 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
 
       {/* On-Demand Jobs */}
       <Card>
-        <CardHeader>
-          <CardTitle>On-Demand Jobs</CardTitle>
-          <CardDescription>
-            Jobs triggered by user actions or system events
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>On-Demand Jobs</CardTitle>
+            <CardDescription>
+              Jobs triggered by user actions or system events
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearGmailSync}
+            disabled={isClearing}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            {isClearing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-2" />
+            )}
+            Clear Gmail Sync
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>

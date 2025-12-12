@@ -231,3 +231,55 @@ export async function GET(request: Request, { params }: RouteParams) {
     );
   }
 }
+
+// Clear Gmail sync queue
+export async function DELETE(request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    const { slug } = await params;
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const result = await getOrgAndCheckAccess(slug, session.user.id);
+
+    if (!result) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    // Only admins and owners can clear queues
+    if (!['owner', 'admin'].includes(result.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Clear the Gmail sync queue
+    const gmailQueue = queues.gmailSync;
+
+    // Remove all jobs (waiting, active, delayed, failed)
+    await gmailQueue.obliterate({ force: true });
+
+    // Reset Gmail account sync status in database
+    await db
+      .update(gmailAccounts)
+      .set({
+        syncStatus: 'idle',
+        syncProgress: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(gmailAccounts.organizationId, result.organization.id));
+
+    console.log(`[Jobs API] Gmail sync queue cleared by ${session.user.email}`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Gmail sync queue cleared',
+    });
+  } catch (error) {
+    console.error('Error clearing Gmail sync queue:', error);
+    return NextResponse.json(
+      { error: 'Failed to clear queue' },
+      { status: 500 }
+    );
+  }
+}
