@@ -40,20 +40,27 @@ export function VolumeBar({
                 className="absolute inset-y-0 left-0 rounded-full overflow-hidden flex"
                 style={{ width: `${Math.max(volumePercent, 2)}%` }}
               >
-                {/* Passed segment (green) */}
-                <div
-                  className="h-full bg-success transition-all duration-300"
-                  style={{ width: `${passedPercent}%` }}
-                />
-                {/* Failed segment (red) */}
-                <div
-                  className="h-full bg-destructive transition-all duration-300"
-                  style={{ width: `${100 - passedPercent}%` }}
-                />
+                {totalMessages > 0 ? (
+                <>
+                  {/* Passed segment (green) */}
+                  <div
+                    className="h-full bg-success transition-all duration-300"
+                    style={{ width: `${passedPercent}%` }}
+                  />
+                  {/* Failed segment (red) */}
+                  <div
+                    className="h-full bg-destructive transition-all duration-300"
+                    style={{ width: `${100 - passedPercent}%` }}
+                  />
+                </>
+              ) : (
+                /* Empty state - gray bar */
+                <div className="h-full w-full bg-muted-foreground/20" />
+              )}
               </div>
             </div>
             {/* Message count */}
-            <span className="text-sm text-muted-foreground tabular-nums">
+            <span className="text-sm text-muted-foreground tabular-nums min-w-[4ch] text-right">
               {totalMessages.toLocaleString()}
             </span>
           </div>

@@ -24,6 +24,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { VolumeBar } from '@/components/domains/volume-bar';
+import { cn } from '@/lib/utils';
 
 interface Domain {
   id: string;
@@ -54,6 +55,16 @@ interface DnsStatus {
 }
 
 const PAGE_SIZE = 20;
+
+// Grid column configuration for consistent alignment
+// Mobile: Domain + Status only
+// Tablet (md): Domain + DNS Records + Status
+// Desktop (lg): Domain + DNS Records + 7-Day Volume + Status
+const GRID_COLUMNS = {
+  base: 'grid-cols-[1fr_auto]',
+  md: 'md:grid-cols-[1fr_auto_auto]',
+  lg: 'lg:grid-cols-[1fr_auto_minmax(180px,1fr)_auto]',
+};
 
 // DNS Status Badge component that fetches live DNS status
 function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: string }) {
@@ -99,7 +110,11 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
   }, [domainId, orgSlug]);
 
   if (loading) {
-    return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+    return (
+      <div className="flex items-center justify-center w-[120px]">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Loading DNS status" />
+      </div>
+    );
   }
 
   if (error || !status) {
@@ -107,7 +122,9 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <ShieldAlert className="h-4 w-4 text-muted-foreground cursor-help" />
+            <div className="flex items-center justify-center w-[120px]">
+              <ShieldAlert className="h-4 w-4 text-muted-foreground cursor-help" aria-label="DNS status unavailable" />
+            </div>
           </TooltipTrigger>
           <TooltipContent>
             <p>{error || 'Failed to load DNS status'}</p>
@@ -125,10 +142,10 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
 
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-center gap-1 w-[120px]">
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={`p-1 rounded ${hasSpf ? 'text-green-600' : 'text-red-500'}`}>
+            <div className={cn('p-1 rounded', hasSpf ? 'text-success' : 'text-destructive')}>
               <span className="text-xs font-medium">SPF</span>
             </div>
           </TooltipTrigger>
@@ -142,7 +159,7 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={`p-1 rounded ${hasDkim ? 'text-green-600' : 'text-yellow-500'}`}>
+            <div className={cn('p-1 rounded', hasDkim ? 'text-success' : 'text-warning')}>
               <span className="text-xs font-medium">DKIM</span>
             </div>
           </TooltipTrigger>
@@ -158,7 +175,7 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={`p-1 rounded ${hasDmarc ? 'text-green-600' : 'text-red-500'}`}>
+            <div className={cn('p-1 rounded', hasDmarc ? 'text-success' : 'text-destructive')}>
               <span className="text-xs font-medium">DMARC</span>
             </div>
           </TooltipTrigger>
@@ -171,13 +188,13 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
         </Tooltip>
 
         {allValid && (
-          <ShieldCheck className="h-4 w-4 text-green-600 ml-1" />
+          <ShieldCheck className="h-4 w-4 text-success ml-1" aria-label="All DNS records valid" />
         )}
         {noneValid && (
-          <ShieldX className="h-4 w-4 text-red-500 ml-1" />
+          <ShieldX className="h-4 w-4 text-destructive ml-1" aria-label="No DNS records configured" />
         )}
         {!allValid && !noneValid && (
-          <ShieldAlert className="h-4 w-4 text-yellow-500 ml-1" />
+          <ShieldAlert className="h-4 w-4 text-warning ml-1" aria-label="Some DNS records missing" />
         )}
       </div>
     </TooltipProvider>
@@ -238,23 +255,48 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
     setPage(1);
   };
 
+  // Build grid class based on whether volume bar is shown
+  const gridClass = showVolumeBar
+    ? cn('grid items-center gap-4', GRID_COLUMNS.base, GRID_COLUMNS.md, GRID_COLUMNS.lg)
+    : cn('grid items-center gap-4', GRID_COLUMNS.base, GRID_COLUMNS.md);
+
   return (
     <div className="space-y-4">
       {/* Search */}
       {domains.length > 10 && (
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search domains..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
+            aria-label="Search domains"
           />
         </div>
       )}
 
-      {/* List */}
-      <div className="divide-y">
+      {/* Column Headers */}
+      {paginatedDomains.length > 0 && (
+        <div
+          className={cn(
+            gridClass,
+            'px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b'
+          )}
+          role="row"
+          aria-hidden="true"
+        >
+          <div>Domain</div>
+          <div className="hidden md:block text-center">DNS Records</div>
+          {showVolumeBar && (
+            <div className="hidden lg:block text-center">7-Day Volume</div>
+          )}
+          <div className="text-right">Status</div>
+        </div>
+      )}
+
+      {/* Domain Rows */}
+      <div className="divide-y" role="list" aria-label="Domains list">
         {paginatedDomains.map((domain) => {
           const stats = domainStats.get(domain.id);
 
@@ -262,48 +304,60 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
             <Link
               key={domain.id}
               href={`/orgs/${orgSlug}/domains/${domain.id}`}
-              className="flex items-center justify-between py-4 hover:bg-muted/50 -mx-4 px-4 transition-colors"
+              className={cn(
+                gridClass,
+                'py-4 hover:bg-muted/50 -mx-4 px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              )}
+              role="listitem"
             >
-              <div className="flex items-center gap-3">
-                <Globe className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{domain.domain}</p>
+              {/* Domain Column */}
+              <div className="flex items-center gap-3 min-w-0">
+                <Globe className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{domain.domain}</p>
                   {domain.displayName && domain.displayName !== domain.domain && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground truncate">
                       {domain.displayName}
                     </p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+
+              {/* DNS Records Column - hidden on mobile */}
+              <div className="hidden md:block">
                 <DnsStatusBadges domainId={domain.id} orgSlug={orgSlug} />
-                {/* Volume Bar - after record status */}
-                {showVolumeBar && (
-                  <div className="hidden md:block">
-                    {statsLoading ? (
-                      <div className="w-32 h-3 bg-muted rounded-full animate-pulse" />
-                    ) : stats ? (
-                      <VolumeBar
-                        volumePercent={stats.volumePercent || 0}
-                        totalMessages={stats.totalMessages || 0}
-                        passedMessages={stats.passedMessages || 0}
-                        failedMessages={stats.failedMessages || 0}
-                        passRate={stats.passRate || 0}
-                      />
-                    ) : (
-                      <div className="w-32 h-3 bg-muted/30 rounded-full" />
-                    )}
-                  </div>
-                )}
+              </div>
+
+              {/* Volume Bar Column - hidden on mobile/tablet */}
+              {showVolumeBar && (
+                <div className="hidden lg:flex items-center justify-center">
+                  {statsLoading ? (
+                    <div className="w-full max-w-[160px] h-3 bg-muted rounded-full animate-pulse" />
+                  ) : stats ? (
+                    <VolumeBar
+                      volumePercent={stats.volumePercent || 0}
+                      totalMessages={stats.totalMessages || 0}
+                      passedMessages={stats.passedMessages || 0}
+                      failedMessages={stats.failedMessages || 0}
+                      passRate={stats.passRate || 0}
+                    />
+                  ) : (
+                    <div className="w-full max-w-[160px] h-3 bg-muted/30 rounded-full" />
+                  )}
+                </div>
+              )}
+
+              {/* Status Column */}
+              <div className="flex justify-end">
                 {domain.verifiedAt ? (
-                  <Badge variant="secondary" className="gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Verified
+                  <Badge variant="secondary" className="gap-1 shrink-0">
+                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                    <span>Verified</span>
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="gap-1 text-warning">
-                    <Clock className="h-3 w-3" />
-                    Pending
+                  <Badge variant="outline" className="gap-1 text-warning shrink-0">
+                    <Clock className="h-3 w-3" aria-hidden="true" />
+                    <span>Pending</span>
                   </Badge>
                 )}
               </div>
@@ -314,15 +368,15 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
 
       {/* Empty State */}
       {filteredDomains.length === 0 && search && (
-        <div className="text-center py-8 text-muted-foreground">
-          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <div className="text-center py-8 text-muted-foreground" role="status">
+          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
           <p>No domains match &quot;{search}&quot;</p>
         </div>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t">
+        <nav className="flex items-center justify-between pt-4 border-t" aria-label="Pagination">
           <p className="text-sm text-muted-foreground">
             Showing {(page - 1) * PAGE_SIZE + 1}-
             {Math.min(page * PAGE_SIZE, filteredDomains.length)} of{' '}
@@ -334,10 +388,11 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
               size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
+              aria-label="Previous page"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <span className="text-sm">
+            <span className="text-sm" aria-current="page">
               Page {page} of {totalPages}
             </span>
             <Button
@@ -345,11 +400,12 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
               size="sm"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              aria-label="Next page"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );
