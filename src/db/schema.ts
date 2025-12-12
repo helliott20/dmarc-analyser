@@ -200,6 +200,27 @@ export const domains = pgTable('domains', {
   index('domains_domain_idx').on(table.domain),
 ]);
 
+// ============ DOMAIN TAGS ============
+
+export const domainTags = pgTable('domain_tags', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar('name', { length: 50 }).notNull(),
+  color: varchar('color', { length: 7 }).default('#6b7280').notNull(), // hex color
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('domain_tags_org_name_idx').on(table.organizationId, table.name),
+]);
+
+export const domainTagAssignments = pgTable('domain_tag_assignments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  domainId: uuid('domain_id').references(() => domains.id, { onDelete: 'cascade' }).notNull(),
+  tagId: uuid('tag_id').references(() => domainTags.id, { onDelete: 'cascade' }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('domain_tag_assignments_idx').on(table.domainId, table.tagId),
+]);
+
 // ============ SUBDOMAINS ============
 
 export const subdomains = pgTable('subdomains', {

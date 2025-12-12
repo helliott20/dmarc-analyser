@@ -33,6 +33,12 @@ interface Domain {
   verifiedAt: Date | null;
 }
 
+interface DomainTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface DomainWithStats extends Domain {
   isActive?: boolean;
   totalMessages?: number;
@@ -40,6 +46,7 @@ interface DomainWithStats extends Domain {
   failedMessages?: number;
   passRate?: number;
   volumePercent?: number;
+  tags?: DomainTag[];
 }
 
 interface DomainsListProps {
@@ -331,7 +338,24 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
               <div className="flex items-center gap-3 min-w-0">
                 <Globe className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden="true" />
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{domain.domain}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium truncate">{domain.domain}</p>
+                    {/* Tags */}
+                    {stats?.tags && stats.tags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {stats.tags.map(tag => (
+                          <Badge
+                            key={tag.id}
+                            variant="outline"
+                            className="text-xs px-1.5 py-0 h-5"
+                            style={{ borderColor: tag.color, color: tag.color }}
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {domain.displayName && domain.displayName !== domain.domain && (
                     <p className="text-sm text-muted-foreground truncate">
                       {domain.displayName}

@@ -8,6 +8,8 @@ import {
   reports,
   records,
   sources,
+  domainTags,
+  domainTagAssignments,
 } from '@/db/schema';
 import { eq, and, gte, inArray, sql, desc, count, sum } from 'drizzle-orm';
 
@@ -284,10 +286,31 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Calculate max volume for relative sizing
     const maxVolume = Math.max(...Array.from(domainStats.values()).map((s) => s.totalMessages), 1);
 
+    // Get tags for all domains
+    const tagAssignments = await db
+      .select({
+        domainId: domainTagAssignments.domainId,
+        tagId: domainTags.id,
+        tagName: domainTags.name,
+        tagColor: domainTags.color,
+      })
+      .from(domainTagAssignments)
+      .innerJoin(domainTags, eq(domainTagAssignments.tagId, domainTags.id))
+      .where(inArray(domainTagAssignments.domainId, domainIds));
+
+    // Group tags by domain
+    const tagsByDomain = new Map<string, Array<{ id: string; name: string; color: string }>>();
+    for (const assignment of tagAssignments) {
+      const tags = tagsByDomain.get(assignment.domainId) || [];
+      tags.push({ id: assignment.tagId, name: assignment.tagName, color: assignment.tagColor });
+      tagsByDomain.set(assignment.domainId, tags);
+    }
+
     // Build domain response with volume data
     const domainsWithStats = orgDomains.map((domain) => {
       const stats = domainStats.get(domain.id) || { totalMessages: 0, passedMessages: 0, failedMessages: 0 };
       const hasActivity = stats.totalMessages > 0;
+      const tags = tagsByDomain.get(domain.id) || [];
 
       return {
         id: domain.id,
@@ -300,6 +323,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         failedMessages: stats.failedMessages,
         passRate: stats.totalMessages > 0 ? Math.round((stats.passedMessages / stats.totalMessages) * 100) : 0,
         volumePercent: Math.round((stats.totalMessages / maxVolume) * 100),
+        tags,
       };
     });
 

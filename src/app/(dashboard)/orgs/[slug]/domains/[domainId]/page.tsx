@@ -35,6 +35,7 @@ import { DomainVerification } from '@/components/domains/domain-verification';
 import { DmarcRecordCard } from '@/components/domains/dmarc-record-card';
 import { DomainStats } from '@/components/domains/domain-stats';
 import { PolicyRecommendations } from '@/components/domains/policy-recommendations';
+import { DomainTagsManager } from '@/components/domains/domain-tags-manager';
 
 interface PageProps {
   params: Promise<{ slug: string; domainId: string }>;
@@ -211,6 +212,14 @@ export default async function DomainPage({ params }: PageProps) {
             {domain.displayName && (
               <p className="text-muted-foreground">{domain.displayName}</p>
             )}
+            {/* Tags */}
+            <div className="mt-2">
+              <DomainTagsManager
+                domainId={domainId}
+                orgSlug={slug}
+                canManage={canManage}
+              />
+            </div>
           </div>
         </div>
 
