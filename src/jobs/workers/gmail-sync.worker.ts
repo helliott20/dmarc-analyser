@@ -146,6 +146,9 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
           const attachments = extractDmarcAttachments(message);
           let reportsFoundInMessage = 0;
 
+          let emailStatus = 'no-attachment';
+          let emailDomain = '';
+
           if (attachments.length === 0) {
             noAttachments++;
           }
@@ -193,9 +196,11 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
               if (!domainMatch) continue;
 
               const reportDomain = domainMatch[1].toLowerCase();
+              emailDomain = reportDomain;
               const domainId = domainMap.get(reportDomain);
               if (!domainId) {
                 domainMismatch++;
+                emailStatus = 'domain-mismatch';
                 continue;
               }
 
@@ -204,9 +209,10 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
               if (importResult.success) {
                 if (importResult.skipped) {
                   skippedReports++;
+                  emailStatus = 'skipped';
                 } else {
                   reportsFoundInMessage++;
-                  console.log(`[Gmail Sync] NEW report imported for ${reportDomain}`);
+                  emailStatus = 'imported';
                   // Queue follow-up jobs (don't await - fire and forget)
                   queueIpEnrichmentForNewSources(domainId).catch(() => {});
                   alertsQueue.add(`alert-${importResult.reportId}`, {
@@ -217,13 +223,18 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
                   } as AlertsJobData).catch(() => {});
                 }
               } else if (importResult.error) {
+                emailStatus = 'error';
                 result.errors.push(`Report import failed: ${importResult.error}`);
               }
             } catch (attachmentError) {
+              emailStatus = 'error';
               const errorMsg = attachmentError instanceof Error ? attachmentError.message : 'Unknown error';
               result.errors.push(`Attachment error: ${errorMsg}`);
             }
           }
+
+          // One line per email
+          console.log(`[Gmail Sync] ${emailStatus.toUpperCase()}${emailDomain ? `: ${emailDomain}` : ''}`);
 
           // Archive processed messages (removes from inbox to prevent re-processing)
           try {
