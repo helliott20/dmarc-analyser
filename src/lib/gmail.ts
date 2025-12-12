@@ -392,8 +392,11 @@ export async function createLabel(
 
   if (!response.ok) {
     const error = await response.json();
-    // If label already exists, find it
+    console.log('[Gmail] Create label response:', response.status, JSON.stringify(error));
+
+    // If label already exists (409 Conflict), find it
     if (error.error?.code === 409) {
+      console.log('[Gmail] Label already exists, fetching existing labels...');
       const labelsResponse = await fetch(
         'https://gmail.googleapis.com/gmail/v1/users/me/labels',
         {
@@ -403,12 +406,14 @@ export async function createLabel(
         }
       );
       const labels = await labelsResponse.json();
-      const existingLabel = labels.labels.find((l: { name: string }) => l.name === name);
+      const existingLabel = labels.labels?.find((l: { name: string }) => l.name === name);
       if (existingLabel) {
+        console.log('[Gmail] Found existing label:', existingLabel.id);
         return existingLabel.id;
       }
+      console.log('[Gmail] Could not find existing label in list');
     }
-    throw new Error('Failed to create label');
+    throw new Error(`Failed to create label: ${error.error?.message || response.status}`);
   }
 
   const data = await response.json();
