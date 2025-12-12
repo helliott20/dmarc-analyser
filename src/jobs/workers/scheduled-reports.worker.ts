@@ -4,7 +4,7 @@ import { QUEUE_NAMES } from '../queues';
 import type { ScheduledReportJobData } from '../types';
 import { db } from '@/db';
 import { scheduledReports, domains, reports, records, sources, organizations } from '@/db/schema';
-import { eq, and, gte, lte, sql, desc, count, sum } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc, count, sum, inArray } from 'drizzle-orm';
 import { calculateNextRunAt } from '@/lib/scheduled-reports';
 import { sendScheduledReportEmail } from '@/lib/email-service';
 import { scheduleScheduledReportJobs } from '../scheduler';
@@ -52,7 +52,7 @@ async function calculateReportSummary(
     .from(reports)
     .where(
       and(
-        sql`${reports.domainId} = ANY(${domainIds})`,
+        inArray(reports.domainId, domainIds),
         gte(reports.dateRangeEnd, periodStart),
         lte(reports.dateRangeBegin, periodEnd)
       )
@@ -72,7 +72,7 @@ async function calculateReportSummary(
       passedSpf: sql<number>`SUM(CASE WHEN ${records.dmarcSpf} = 'pass' THEN ${records.count} ELSE 0 END)`,
     })
     .from(records)
-    .where(sql`${records.reportId} = ANY(${reportIdList})`);
+    .where(inArray(records.reportId, reportIdList));
 
   const totalMessages = Number(stats?.total) || 0;
   const passedDkim = Number(stats?.passedDkim) || 0;
@@ -88,7 +88,7 @@ async function calculateReportSummary(
     .from(sources)
     .where(
       and(
-        sql`${sources.domainId} = ANY(${domainIds})`,
+        inArray(sources.domainId, domainIds),
         gte(sources.firstSeen, periodStart),
         lte(sources.firstSeen, periodEnd)
       )
