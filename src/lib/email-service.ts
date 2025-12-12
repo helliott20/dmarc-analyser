@@ -19,6 +19,7 @@ import {
   generateWelcomeEmail,
   generateReportEmail,
   generateTestEmail,
+  generateDomainDiscoveryEmail,
   type OrgBranding,
   type InvitationEmailOptions,
   type AlertEmailOptions,
@@ -305,4 +306,46 @@ export async function sendBrandedTestEmail(params: {
   }
 
   return sendOrgEmail(organizationId, recipientEmail, subject, html, text);
+}
+
+/**
+ * Send domain discovery notification email
+ */
+export async function sendDomainDiscoveryEmail(params: {
+  organizationId: string;
+  recipients: string[];
+  domains: { domain: string; reportCount: number }[];
+}): Promise<{ success: boolean; error?: string }> {
+  const { organizationId, recipients, domains } = params;
+
+  if (domains.length === 0 || recipients.length === 0) {
+    return { success: true }; // Nothing to send
+  }
+
+  // Get org branding and slug
+  const [orgData] = await db
+    .select({
+      name: organizations.name,
+      slug: organizations.slug,
+      logoUrl: organizations.logoUrl,
+      primaryColor: organizations.primaryColor,
+      accentColor: organizations.accentColor,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  if (!orgData) {
+    return { success: false, error: 'Organisation not found' };
+  }
+
+  const domainsUrl = `${getAppUrl()}/orgs/${orgData.slug}/domains`;
+
+  const { html, text, subject } = generateDomainDiscoveryEmail({
+    org: orgData,
+    domains,
+    domainsUrl,
+  });
+
+  return sendOrgEmail(organizationId, recipients, subject, html, text);
 }

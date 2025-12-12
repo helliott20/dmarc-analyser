@@ -69,6 +69,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.syncEnabled = body.syncEnabled;
     }
 
+    // Handle notifyNewDomains toggle
+    if (typeof body.notifyNewDomains === 'boolean') {
+      updateData.notifyNewDomains = body.notifyNewDomains;
+    }
+
     // Handle resetting lastSyncAt (for "Import All" functionality)
     if (body.resetLastSync === true) {
       updateData.lastSyncAt = null;

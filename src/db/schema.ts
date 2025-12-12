@@ -160,6 +160,7 @@ export const gmailAccounts = pgTable('gmail_accounts', {
   lastSyncAt: timestamp('last_sync_at'),
   syncEnabled: boolean('sync_enabled').default(true).notNull(),
   sendEnabled: boolean('send_enabled').default(false).notNull(), // Whether account is authorized for sending
+  notifyNewDomains: boolean('notify_new_domains').default(true).notNull(), // Email notify when new domains discovered
   archiveLabelId: varchar('archive_label_id', { length: 100 }),
   // Sync progress tracking
   syncStatus: varchar('sync_status', { length: 20 }).default('idle'), // 'idle' | 'syncing'

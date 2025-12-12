@@ -607,3 +607,100 @@ Sent by ${org.name} via DMARC Analyser
     subject: `Welcome to ${org.name}!`,
   };
 }
+
+// ============================================
+// DOMAIN DISCOVERY EMAIL
+// ============================================
+
+export interface DomainDiscoveryEmailOptions {
+  org: OrgBranding;
+  domains: { domain: string; reportCount: number }[];
+  domainsUrl: string;
+}
+
+export function generateDomainDiscoveryEmail(options: DomainDiscoveryEmailOptions): { html: string; text: string; subject: string } {
+  const { org, domains, domainsUrl } = options;
+  const primaryColor = org.primaryColor || '#3B82F6';
+  const accentColor = org.accentColor || '#10B981';
+
+  const domainCount = domains.length;
+  const domainWord = domainCount === 1 ? 'domain' : 'domains';
+
+  const domainListHtml = domains.slice(0, 10).map(d => `
+    <tr>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e4e4e7;">
+        <span style="font-weight: 500; color: #18181b;">${d.domain}</span>
+      </td>
+      <td style="padding: 8px 12px; border-bottom: 1px solid #e4e4e7; text-align: right;">
+        <span style="color: #71717a; font-size: 14px;">${d.reportCount} report${d.reportCount !== 1 ? 's' : ''}</span>
+      </td>
+    </tr>
+  `).join('');
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; width: 64px; height: 64px; background-color: ${accentColor}20; border-radius: 50%; line-height: 64px;">
+        <span style="font-size: 32px;">🔍</span>
+      </div>
+    </div>
+
+    <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 600; color: #18181b; text-align: center;">
+      ${domainCount} New ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Discovered
+    </h1>
+
+    <p style="margin: 0 0 24px; font-size: 16px; color: #3f3f46; line-height: 1.6; text-align: center;">
+      We found DMARC reports in your Gmail for ${domainWord} that haven't been added to ${org.name} yet.
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border-radius: 8px; margin-bottom: 24px;">
+      <thead>
+        <tr>
+          <th style="padding: 12px; text-align: left; font-size: 12px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #e4e4e7;">Domain</th>
+          <th style="padding: 12px; text-align: right; font-size: 12px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #e4e4e7;">Reports</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${domainListHtml}
+        ${domains.length > 10 ? `
+          <tr>
+            <td colspan="2" style="padding: 12px; text-align: center; color: #71717a; font-size: 14px;">
+              ...and ${domains.length - 10} more
+            </td>
+          </tr>
+        ` : ''}
+      </tbody>
+    </table>
+
+    <p style="margin: 0 0 8px; font-size: 14px; color: #52525b; line-height: 1.6; text-align: center;">
+      Add these domains to start monitoring their DMARC compliance.
+    </p>
+
+    <div style="text-align: center;">
+      ${getButton('Review & Add Domains', domainsUrl, primaryColor)}
+    </div>
+  `;
+
+  const domainListText = domains.slice(0, 10).map(d => `  - ${d.domain} (${d.reportCount} reports)`).join('\n');
+
+  const text = `
+${domainCount} New ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Discovered
+
+We found DMARC reports in your Gmail for ${domainWord} that haven't been added to ${org.name} yet.
+
+Domains found:
+${domainListText}
+${domains.length > 10 ? `  ...and ${domains.length - 10} more\n` : ''}
+
+Add these domains to start monitoring their DMARC compliance:
+${domainsUrl}
+
+---
+Sent by ${org.name} via DMARC Analyser
+  `.trim();
+
+  return {
+    html: getBaseTemplate({ org, previewText: `${domainCount} new ${domainWord} found in your DMARC reports` }, content),
+    text,
+    subject: `${domainCount} New ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Found in DMARC Reports`,
+  };
+}

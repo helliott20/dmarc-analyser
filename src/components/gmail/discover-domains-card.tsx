@@ -38,7 +38,8 @@ export function DiscoverDomainsCard({ orgSlug }: DiscoverDomainsCardProps) {
       try {
         const response = await fetch(`/api/orgs/${orgSlug}/gmail`);
         if (response.ok) {
-          const accounts = await response.json();
+          const data = await response.json();
+          const accounts = data.accounts || [];
           if (accounts.length > 0) {
             setGmailAccountId(accounts[0].id);
           }

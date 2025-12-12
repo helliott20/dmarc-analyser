@@ -52,6 +52,7 @@ interface GmailAccount {
   id: string;
   email: string;
   syncEnabled: boolean;
+  notifyNewDomains?: boolean;
   lastSyncAt: Date | null;
   createdAt: Date;
   syncStatus?: string | null;
@@ -74,6 +75,7 @@ export function GmailAccountCard({
   const [isTriggeringSync, setIsTriggeringSync] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(account.syncEnabled);
+  const [notifyNewDomains, setNotifyNewDomains] = useState(account.notifyNewDomains ?? true);
 
   const syncProgress = account.syncProgress;
   const isSyncing = account.syncStatus === 'syncing';
@@ -147,6 +149,27 @@ export function GmailAccountCard({
       toast.success(enabled ? 'Auto-sync enabled' : 'Auto-sync disabled');
     } catch {
       toast.error('Failed to update sync settings');
+    }
+  };
+
+  const handleToggleNotify = async (enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/orgs/${orgSlug}/gmail/${account.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ notifyNewDomains: enabled }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update');
+      }
+
+      setNotifyNewDomains(enabled);
+      toast.success(enabled ? 'Domain discovery emails enabled' : 'Domain discovery emails disabled');
+    } catch {
+      toast.error('Failed to update notification settings');
     }
   };
 

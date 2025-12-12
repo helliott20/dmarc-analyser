@@ -18,13 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Send, Loader2, Mail, CheckCircle2, AlertTriangle, KeyRound, Plus } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Send, Loader2, Mail, CheckCircle2, AlertTriangle, KeyRound, Plus, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GmailAccount {
   id: string;
   email: string;
   sendEnabled: boolean;
+  notifyNewDomains?: boolean;
 }
 
 interface EmailSendingCardProps {
@@ -32,6 +34,9 @@ interface EmailSendingCardProps {
   orgSlug: string;
   orgId: string;
 }
+
+// Use the first connected account for notification settings
+// (domain discovery runs after each account's sync)
 
 export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardProps) {
   const router = useRouter();
@@ -44,7 +49,11 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
   const [testEmailTo, setTestEmailTo] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  const handleAuthorize = async (accountId: string) => {
+  // Notification settings (applies to the first account)
+  const primaryAccount = accounts[0];
+  const [notifyNewDomains, setNotifyNewDomains] = useState(primaryAccount?.notifyNewDomains ?? true);
+
+  const handleAuthorise = async (accountId: string) => {
     setIsAuthorizing(true);
     try {
       const response = await fetch(`/api/orgs/${orgSlug}/gmail/${accountId}/authorize-send`, {
@@ -52,14 +61,35 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start authorization');
+        throw new Error('Failed to start authorisation');
       }
 
       const { authUrl } = await response.json();
       window.location.href = authUrl;
     } catch (error) {
-      toast.error('Failed to start authorization');
+      toast.error('Failed to start authorisation');
       setIsAuthorizing(false);
+    }
+  };
+
+  const handleToggleNotify = async (enabled: boolean) => {
+    if (!primaryAccount) return;
+
+    try {
+      const response = await fetch(`/api/orgs/${orgSlug}/gmail/${primaryAccount.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyNewDomains: enabled }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update');
+      }
+
+      setNotifyNewDomains(enabled);
+      toast.success(enabled ? 'Domain discovery emails enabled' : 'Domain discovery emails disabled');
+    } catch {
+      toast.error('Failed to update notification settings');
     }
   };
 
@@ -168,15 +198,15 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
           <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-md text-yellow-700 dark:text-yellow-400">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium">Authorization required</p>
+              <p className="font-medium">Authorisation required</p>
               <p className="text-yellow-600 dark:text-yellow-500">
-                To send emails, you need to authorize a Gmail account with sending permissions.
+                To send emails, you need to authorise a Gmail account with sending permissions.
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Authorize an existing account or connect a new one:</p>
+            <p className="text-sm font-medium">Authorise an existing account or connect a new one:</p>
             {accounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-2">
@@ -185,7 +215,7 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => handleAuthorize(account.id)}
+                  onClick={() => handleAuthorise(account.id)}
                   disabled={isAuthorizing}
                 >
                   {isAuthorizing ? (
@@ -193,7 +223,7 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
                   ) : (
                     <KeyRound className="h-4 w-4 mr-1" />
                   )}
-                  Authorize
+                  Authorise
                 </Button>
               </div>
             ))}
@@ -235,7 +265,7 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
           <div className="text-sm">
             <p className="font-medium">Email sending is enabled</p>
             <p className="text-green-600 dark:text-green-500">
-              Alerts and scheduled reports will be sent from your authorized Gmail account.
+              Alerts and scheduled reports will be sent from your authorised Gmail account.
             </p>
           </div>
         </div>
@@ -278,6 +308,26 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
             <p className="text-xs text-muted-foreground mt-1">
               Send a test email to verify sending is working correctly
             </p>
+          </div>
+        </div>
+
+        {/* Options */}
+        <div className="pt-4 border-t">
+          <h4 className="text-sm font-medium mb-3">Options</h4>
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Domain discovery notifications</p>
+                <p className="text-xs text-muted-foreground">
+                  Email when new domains are found in DMARC reports
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={notifyNewDomains}
+              onCheckedChange={handleToggleNotify}
+            />
           </div>
         </div>
       </CardContent>

@@ -3,8 +3,10 @@ import { createRedisConnection } from '../redis';
 import { QUEUE_NAMES, alertsQueue, ipEnrichmentQueue } from '../queues';
 import type { GmailSyncJobData, GmailSyncResult, AlertsJobData, IpEnrichmentJobData } from '../types';
 import { db } from '@/db';
-import { gmailAccounts, domains, sources, knownSenders } from '@/db/schema';
+import { gmailAccounts, domains, sources, knownSenders, orgMembers, users } from '@/db/schema';
 import { eq, and, isNull, or } from 'drizzle-orm';
+import { discoverDomainsFromGmail } from '@/lib/domain-discovery';
+import { sendDomainDiscoveryEmail } from '@/lib/email-service';
 import { autoMatchSource } from '@/lib/known-sender-matcher';
 import {
   getValidAccessToken,
@@ -342,6 +344,12 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
       .where(eq(gmailAccounts.id, gmailAccountId));
 
     console.log(`[Gmail Sync] Completed: ${result.emailsProcessed} emails, ${result.reportsFound} reports`);
+
+    // Run domain discovery after successful sync
+    discoverAndNotifyNewDomains(gmailAccountId, organizationId).catch((err) => {
+      console.error('[Gmail Sync] Domain discovery failed:', err);
+    });
+
     return result;
   } catch (error) {
     console.error('[Gmail Sync] Fatal error:', error);
@@ -385,6 +393,53 @@ async function queueIpEnrichmentForNewSources(domainId: string) {
       ipAddress: source.sourceIp,
     };
     await ipEnrichmentQueue.add(`enrich-${source.id}`, jobData);
+  }
+}
+
+async function discoverAndNotifyNewDomains(gmailAccountId: string, organizationId: string) {
+  try {
+    // Check if notifications are enabled for this account
+    const [account] = await db
+      .select({ notifyNewDomains: gmailAccounts.notifyNewDomains })
+      .from(gmailAccounts)
+      .where(eq(gmailAccounts.id, gmailAccountId));
+
+    // Discover domains from Gmail
+    const discovery = await discoverDomainsFromGmail(gmailAccountId, organizationId);
+
+    if (discovery.suggestions.length === 0) {
+      return;
+    }
+
+    console.log(`[Gmail Sync] Discovered ${discovery.suggestions.length} new domains`);
+
+    // Only send email if notifications are enabled
+    if (account?.notifyNewDomains) {
+      // Get org owner emails for notification
+      const admins = await db
+        .select({ email: users.email })
+        .from(orgMembers)
+        .innerJoin(users, eq(orgMembers.userId, users.id))
+        .where(
+          and(
+            eq(orgMembers.organizationId, organizationId),
+            eq(orgMembers.role, 'owner')
+          )
+        );
+
+      const recipients = admins.map(a => a.email).filter((e): e is string => !!e);
+
+      if (recipients.length > 0) {
+        await sendDomainDiscoveryEmail({
+          organizationId,
+          recipients,
+          domains: discovery.suggestions,
+        });
+        console.log(`[Gmail Sync] Sent domain discovery email to ${recipients.length} recipients`);
+      }
+    }
+  } catch (error) {
+    console.error('[Gmail Sync] Domain discovery error:', error);
   }
 }
 
