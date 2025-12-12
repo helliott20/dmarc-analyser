@@ -128,6 +128,11 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
         pageToken,
       });
 
+      // Track stats for this batch
+      let skippedReports = 0;
+      let noAttachments = 0;
+      let domainMismatch = 0;
+
       // Process messages in parallel batches
       const processMessage = async (messageId: string) => {
         // Quick cancellation check before processing each message
@@ -139,6 +144,10 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
           const message = await getMessage(accessToken, messageId);
           const attachments = extractDmarcAttachments(message);
           let reportsFoundInMessage = 0;
+
+          if (attachments.length === 0) {
+            noAttachments++;
+          }
 
           for (const attachment of attachments) {
             try {
@@ -184,13 +193,19 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
 
               const reportDomain = domainMatch[1].toLowerCase();
               const domainId = domainMap.get(reportDomain);
-              if (!domainId) continue;
+              if (!domainId) {
+                domainMismatch++;
+                continue;
+              }
 
               const importResult = await importDmarcReport(xmlContent, domainId, messageId);
 
               if (importResult.success) {
-                reportsFoundInMessage++;
-                if (importResult.reportId && !importResult.skipped) {
+                if (importResult.skipped) {
+                  skippedReports++;
+                } else {
+                  reportsFoundInMessage++;
+                  console.log(`[Gmail Sync] NEW report imported for ${reportDomain}`);
                   // Queue follow-up jobs (don't await - fire and forget)
                   queueIpEnrichmentForNewSources(domainId).catch(() => {});
                   alertsQueue.add(`alert-${importResult.reportId}`, {
@@ -230,10 +245,15 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
       );
 
       // Aggregate results
+      let batchNewReports = 0;
       for (const r of batchResults) {
         result.emailsProcessed += r.processed;
         result.reportsFound += r.reports;
+        batchNewReports += r.reports;
       }
+
+      // Log batch summary
+      console.log(`[Gmail Sync] Batch: ${searchResult.messageIds.length} emails | New: ${batchNewReports} | Skipped (already in DB): ${skippedReports} | No attachments: ${noAttachments} | Domain mismatch: ${domainMismatch}`);
 
       // Update progress after each batch
       await job.updateProgress({
