@@ -177,9 +177,12 @@ export async function searchDmarcEmails(
   const { afterDate, beforeDate, maxResults = 50, pageToken, domains, searchAll } = options;
 
   // Search for DMARC aggregate reports
-  // By default, only search inbox (processed emails are archived)
-  // Use searchAll=true to re-process all emails including archived ones
+  // Always exclude already-processed emails (labeled DMARC-Processed)
+  // By default, only search inbox; use searchAll=true for all mail
   let query = searchAll ? 'has:attachment' : 'in:inbox has:attachment';
+
+  // Exclude already-processed emails to avoid re-processing
+  query += ' -label:DMARC-Processed';
 
   // If domains specified, search for reports about those domains
   if (domains && domains.length > 0) {

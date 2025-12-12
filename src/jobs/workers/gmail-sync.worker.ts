@@ -114,13 +114,14 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
     const domainNames = orgDomains.map((d) => d.domain);
     const domainMap = new Map(orgDomains.map((d) => [d.domain.toLowerCase(), d.id]));
 
-    // Create or get the processed label
+    // Create or get the processed label - this is required to avoid re-processing
     let labelId: string;
     try {
       labelId = await createLabel(accessToken, DMARC_LABEL);
+      console.log(`[Gmail Sync] Using label: ${DMARC_LABEL} (${labelId})`);
     } catch (error) {
-      console.warn('[Gmail Sync] Could not create/get label:', error);
-      labelId = '';
+      console.error('[Gmail Sync] Could not create/get label:', error);
+      throw new Error('Failed to create DMARC-Processed label - cannot proceed without it');
     }
 
     // Search for DMARC emails
@@ -220,9 +221,12 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
             }
           }
 
-          // Archive without waiting
-          if (labelId || attachments.length > 0) {
-            archiveMessage(accessToken, messageId, labelId || undefined).catch(() => {});
+          // Always archive and label processed messages (even if no reports found)
+          // This prevents re-processing the same email
+          if (labelId) {
+            archiveMessage(accessToken, messageId, labelId).catch((err) => {
+              console.warn(`[Gmail Sync] Failed to archive message ${messageId}:`, err);
+            });
           }
 
           return { processed: 1, reports: reportsFoundInMessage };
