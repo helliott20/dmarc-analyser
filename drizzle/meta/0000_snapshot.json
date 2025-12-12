@@ -1,5 +1,5 @@
 {
-  "id": "b4f5f818-ad5e-47da-84f6-71a0ac351aab",
+  "id": "3dc76317-e520-44b8-b297-154b264cb0f9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1535,6 +1535,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "notify_new_domains": {
+          "name": "notify_new_domains",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "archive_label_id": {
           "name": "archive_label_id",

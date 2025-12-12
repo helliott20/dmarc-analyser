@@ -168,6 +168,7 @@ CREATE TABLE "gmail_accounts" (
 	"last_sync_at" timestamp,
 	"sync_enabled" boolean DEFAULT true NOT NULL,
 	"send_enabled" boolean DEFAULT false NOT NULL,
+	"notify_new_domains" boolean DEFAULT true NOT NULL,
 	"archive_label_id" varchar(100),
 	"sync_status" varchar(20) DEFAULT 'idle',
 	"sync_progress" jsonb,

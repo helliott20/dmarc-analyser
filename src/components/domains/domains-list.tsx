@@ -234,14 +234,31 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
   }, [orgSlug, showVolumeBar]);
 
   const filteredDomains = useMemo(() => {
-    if (!search.trim()) return domains;
-    const query = search.toLowerCase();
-    return domains.filter(
-      (d) =>
-        d.domain.toLowerCase().includes(query) ||
-        d.displayName?.toLowerCase().includes(query)
-    );
-  }, [domains, search]);
+    let result = domains;
+
+    // Filter by search
+    if (search.trim()) {
+      const query = search.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.domain.toLowerCase().includes(query) ||
+          d.displayName?.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort by volume (descending) when stats are loaded, otherwise alphabetically
+    if (showVolumeBar && domainStats.size > 0) {
+      result = [...result].sort((a, b) => {
+        const aStats = domainStats.get(a.id);
+        const bStats = domainStats.get(b.id);
+        const aVolume = aStats?.totalMessages ?? 0;
+        const bVolume = bStats?.totalMessages ?? 0;
+        return bVolume - aVolume; // Descending order
+      });
+    }
+
+    return result;
+  }, [domains, search, showVolumeBar, domainStats]);
 
   const totalPages = Math.ceil(filteredDomains.length / PAGE_SIZE);
   const paginatedDomains = filteredDomains.slice(
