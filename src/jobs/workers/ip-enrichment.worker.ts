@@ -182,7 +182,7 @@ async function processIpEnrichment(job: Job<IpEnrichmentJobData>): Promise<void>
         await db
           .update(sources)
           .set({
-            country: 'Private',
+            country: 'XX', // Special code for private/unknown
             organization: 'Private Network',
             updatedAt: new Date(),
           })
