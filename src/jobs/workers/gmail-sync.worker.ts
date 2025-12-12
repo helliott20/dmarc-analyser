@@ -3,8 +3,9 @@ import { createRedisConnection } from '../redis';
 import { QUEUE_NAMES, alertsQueue, ipEnrichmentQueue } from '../queues';
 import type { GmailSyncJobData, GmailSyncResult, AlertsJobData, IpEnrichmentJobData } from '../types';
 import { db } from '@/db';
-import { gmailAccounts, domains, sources } from '@/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { gmailAccounts, domains, sources, knownSenders } from '@/db/schema';
+import { eq, and, isNull, or } from 'drizzle-orm';
+import { autoMatchSource } from '@/lib/known-sender-matcher';
 import {
   getValidAccessToken,
   searchDmarcEmails,
@@ -215,6 +216,7 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
                   emailStatus = 'imported';
                   // Queue follow-up jobs (don't await - fire and forget)
                   queueIpEnrichmentForNewSources(domainId).catch(() => {});
+                  autoMatchNewSources(domainId, organizationId).catch(() => {});
                   alertsQueue.add(`alert-${importResult.reportId}`, {
                     type: 'report_imported',
                     domainId,
@@ -383,6 +385,39 @@ async function queueIpEnrichmentForNewSources(domainId: string) {
       ipAddress: source.sourceIp,
     };
     await ipEnrichmentQueue.add(`enrich-${source.id}`, jobData);
+  }
+}
+
+async function autoMatchNewSources(domainId: string, organizationId: string) {
+  // Find sources without a known sender assigned
+  const unmatchedSources = await db
+    .select({ id: sources.id })
+    .from(sources)
+    .where(
+      and(
+        eq(sources.domainId, domainId),
+        isNull(sources.knownSenderId)
+      )
+    )
+    .limit(100); // Limit to avoid long processing
+
+  let matched = 0;
+  for (const source of unmatchedSources) {
+    const match = await autoMatchSource(source.id, organizationId);
+    if (match) {
+      await db
+        .update(sources)
+        .set({
+          knownSenderId: match.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(sources.id, source.id));
+      matched++;
+    }
+  }
+
+  if (matched > 0) {
+    console.log(`[Gmail Sync] Auto-matched ${matched} sources to known senders`);
   }
 }
 
