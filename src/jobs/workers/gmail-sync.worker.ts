@@ -18,7 +18,8 @@ import AdmZip from 'adm-zip';
 import { gunzipSync } from 'zlib';
 import { scheduleGmailSyncJobs } from '../scheduler';
 
-const CONCURRENCY = 2; // Process 2 emails at a time (avoid Gmail rate limits)
+const CONCURRENCY = 1; // Process 1 email at a time (avoid Gmail rate limits)
+const DELAY_BETWEEN_EMAILS_MS = 100; // 100ms delay + ~200ms API calls = ~3 emails/sec (180/min, 3600 units/min)
 
 // Cancellation check with caching to avoid too many DB queries
 const cancellationCache = new Map<string, { cancelled: boolean; checkedAt: number }>();
@@ -225,9 +226,14 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
           }
 
           // Archive processed messages (removes from inbox to prevent re-processing)
-          archiveMessage(accessToken, messageId).catch((err) => {
+          try {
+            await archiveMessage(accessToken, messageId);
+          } catch (err) {
             console.warn(`[Gmail Sync] Failed to archive message ${messageId}:`, err);
-          });
+          }
+
+          // Rate limit delay
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_EMAILS_MS));
 
           return { processed: 1, reports: reportsFoundInMessage };
         } catch (messageError) {
