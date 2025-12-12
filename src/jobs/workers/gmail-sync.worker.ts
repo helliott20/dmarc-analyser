@@ -12,15 +12,13 @@ import {
   getAttachment,
   extractDmarcAttachments,
   archiveMessage,
-  createLabel,
 } from '@/lib/gmail';
 import { importDmarcReport } from '@/lib/report-importer';
 import AdmZip from 'adm-zip';
 import { gunzipSync } from 'zlib';
 import { scheduleGmailSyncJobs } from '../scheduler';
 
-const DMARC_LABEL = 'DMARC-Processed';
-const CONCURRENCY = 5; // Process 5 emails at a time
+const CONCURRENCY = 2; // Process 2 emails at a time (avoid Gmail rate limits)
 
 // Cancellation check with caching to avoid too many DB queries
 const cancellationCache = new Map<string, { cancelled: boolean; checkedAt: number }>();
@@ -113,16 +111,6 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
 
     const domainNames = orgDomains.map((d) => d.domain);
     const domainMap = new Map(orgDomains.map((d) => [d.domain.toLowerCase(), d.id]));
-
-    // Try to create/get the processed label (optional - archiving is what matters)
-    let labelId: string | undefined;
-    try {
-      labelId = await createLabel(accessToken, DMARC_LABEL);
-      console.log(`[Gmail Sync] Using label: ${DMARC_LABEL} (${labelId})`);
-    } catch (error) {
-      console.warn('[Gmail Sync] Could not create/get label (will archive without label):', error);
-      labelId = undefined;
-    }
 
     // Search for DMARC emails
     const searchOptions = {
@@ -221,9 +209,8 @@ async function processGmailSync(job: Job<GmailSyncJobData>): Promise<GmailSyncRe
             }
           }
 
-          // Always archive processed messages (removes from inbox to prevent re-processing)
-          // Label is optional - archiving is what matters for the in:inbox search filter
-          archiveMessage(accessToken, messageId, labelId).catch((err) => {
+          // Archive processed messages (removes from inbox to prevent re-processing)
+          archiveMessage(accessToken, messageId).catch((err) => {
             console.warn(`[Gmail Sync] Failed to archive message ${messageId}:`, err);
           });
 
