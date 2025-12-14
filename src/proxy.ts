@@ -34,10 +34,11 @@ export default auth((req) => {
     pathname.startsWith(route)
   );
 
-  // Static assets and API routes should pass through
+  // Static assets, ACME challenges, and API routes should pass through
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    pathname.startsWith('/.well-known') || // ACME/Let's Encrypt challenges
     pathname.includes('.')
   ) {
     return NextResponse.next();
