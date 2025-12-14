@@ -15,16 +15,14 @@ import {
 import {
   Globe,
   Mail,
-  Shield,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
   Activity,
 } from 'lucide-react';
-import { SevenDaySummary } from '@/components/dashboard/seven-day-summary';
+import { QuickStats } from '@/components/dashboard/quick-stats';
+import { DailyVolumeChart } from '@/components/dashboard/daily-volume-chart';
+import { DomainBreakdownChart } from '@/components/dashboard/domain-breakdown-chart';
+import { ComplianceSummary } from '@/components/dashboard/compliance-summary';
 import { TopSourcesTable } from '@/components/dashboard/top-sources-table';
 import { ThreatsByCountry } from '@/components/dashboard/threats-by-country';
-import { QuickStats } from '@/components/dashboard/quick-stats';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -163,7 +161,7 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
       {/* Quick Stats - Alerts, Tasks, Issues */}
       <QuickStats orgSlug={slug} />
 
-      {/* Primary Stats Cards */}
+      {/* At-a-glance Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -171,7 +169,7 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMessages.toLocaleString()}</div>
+            <div className="text-2xl font-bold tabular-nums">{stats.totalMessages.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
@@ -179,13 +177,21 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              stats.passRate >= 95 ? 'bg-success/10 text-success' :
+              stats.passRate >= 80 ? 'bg-warning/10 text-warning' :
+              'bg-destructive/10 text-destructive'
+            }`}>
+              {stats.passRate >= 95 ? 'Excellent' : stats.passRate >= 80 ? 'Good' : 'Needs Work'}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.passRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.passedMessages.toLocaleString()} passed, {stats.failedMessages.toLocaleString()} failed
-            </p>
+            <div className="text-2xl font-bold tabular-nums">{stats.passRate}%</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-success">{stats.passedMessages.toLocaleString()} passed</span>
+              <span className="text-xs text-muted-foreground">/</span>
+              <span className="text-xs text-destructive">{stats.failedMessages.toLocaleString()} failed</span>
+            </div>
           </CardContent>
         </Card>
 
@@ -195,7 +201,7 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
             <Mail className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.reportsLast30Days}</div>
+            <div className="text-2xl font-bold tabular-nums">{stats.reportsLast30Days}</div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
@@ -206,7 +212,7 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDomains}</div>
+            <div className="text-2xl font-bold tabular-nums">{stats.totalDomains}</div>
             <p className="text-xs text-muted-foreground">
               {stats.verifiedDomains} verified
             </p>
@@ -214,55 +220,22 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         </Card>
       </div>
 
-      {/* 7 Day Summary and Top Sources */}
+      {/* Main Charts Row - Daily Volume Chart (Full Width) */}
+      <DailyVolumeChart orgSlug={slug} />
+
+      {/* Secondary Charts Row - Domain Breakdown and Compliance Summary */}
       <div className="grid gap-4 md:grid-cols-2">
-        <SevenDaySummary orgSlug={slug} />
+        <DomainBreakdownChart orgSlug={slug} />
+        <ComplianceSummary orgSlug={slug} />
+      </div>
+
+      {/* Data Tables Row - Top Sources and Threats */}
+      <div className="grid gap-4 md:grid-cols-2">
         <TopSourcesTable orgSlug={slug} />
-      </div>
-
-      {/* Threats by Country and Authentication Status */}
-      <div className="grid gap-4 md:grid-cols-2">
         <ThreatsByCountry orgSlug={slug} />
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="h-4 w-4 text-primary" />
-              Authentication Status
-            </CardTitle>
-            <CardDescription>
-              30-day DMARC authentication results
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-success/10">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span className="text-sm font-medium">Passed</span>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-success tabular-nums">
-                  {stats.passedMessages.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground tabular-nums">{stats.passRate}%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/10">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                <span className="text-sm font-medium">Failed</span>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-destructive tabular-nums">
-                  {stats.failedMessages.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground tabular-nums">{100 - stats.passRate}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Only show if no domains */}
       {stats.totalDomains === 0 && (
         <Card>
           <CardHeader>

@@ -60,7 +60,7 @@ export interface DataExportJobData {
 }
 
 export interface CleanupJobData {
-  type: 'data_retention' | 'unverified_domains' | 'expired_sessions' | 'expired_exports';
+  type: 'data_retention' | 'unverified_domains' | 'expired_sessions' | 'expired_exports' | 'verification_lapse_notifications';
   organizationId?: string; // If specified, only cleanup for this org
 }
 

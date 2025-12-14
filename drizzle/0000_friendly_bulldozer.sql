@@ -27,6 +27,33 @@ CREATE TABLE "accounts" (
 	"session_state" varchar(255)
 );
 --> statement-breakpoint
+CREATE TABLE "ai_integrations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"gemini_api_key" text,
+	"gemini_api_key_set_at" timestamp,
+	"last_used_at" timestamp,
+	"usage_count_24h" integer DEFAULT 0 NOT NULL,
+	"usage_reset_at" timestamp,
+	"is_enabled" boolean DEFAULT true NOT NULL,
+	"last_error" text,
+	"last_error_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "ai_integrations_organization_id_unique" UNIQUE("organization_id")
+);
+--> statement-breakpoint
+CREATE TABLE "ai_recommendations_cache" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"domain_id" uuid NOT NULL,
+	"recommendation" jsonb NOT NULL,
+	"input_hash" varchar(64) NOT NULL,
+	"generated_at" timestamp NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "ai_recommendations_cache_domain_id_unique" UNIQUE("domain_id")
+);
+--> statement-breakpoint
 CREATE TABLE "alert_rules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -114,6 +141,21 @@ CREATE TABLE "dkim_results" (
 	"human_result" text
 );
 --> statement-breakpoint
+CREATE TABLE "domain_tag_assignments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"domain_id" uuid NOT NULL,
+	"tag_id" uuid NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "domain_tags" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"name" varchar(50) NOT NULL,
+	"color" varchar(7) DEFAULT '#6b7280' NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "domains" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
@@ -123,6 +165,8 @@ CREATE TABLE "domains" (
 	"verification_method" "verification_method" DEFAULT 'dns_txt',
 	"verified_at" timestamp,
 	"verified_by" uuid,
+	"verification_lapsed_at" timestamp,
+	"verification_lapse_notified_at" timestamp,
 	"dmarc_record" text,
 	"spf_record" text,
 	"last_dns_check" timestamp,
@@ -169,6 +213,7 @@ CREATE TABLE "gmail_accounts" (
 	"sync_enabled" boolean DEFAULT true NOT NULL,
 	"send_enabled" boolean DEFAULT false NOT NULL,
 	"notify_new_domains" boolean DEFAULT true NOT NULL,
+	"notify_verification_lapse" boolean DEFAULT true NOT NULL,
 	"archive_label_id" varchar(100),
 	"sync_status" varchar(20) DEFAULT 'idle',
 	"sync_progress" jsonb,
@@ -395,6 +440,8 @@ CREATE TABLE "webhooks" (
 );
 --> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_integrations" ADD CONSTRAINT "ai_integrations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_recommendations_cache" ADD CONSTRAINT "ai_recommendations_cache_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alert_rules" ADD CONSTRAINT "alert_rules_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -409,6 +456,9 @@ ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN
 ALTER TABLE "data_exports" ADD CONSTRAINT "data_exports_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_exports" ADD CONSTRAINT "data_exports_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dkim_results" ADD CONSTRAINT "dkim_results_record_id_records_id_fk" FOREIGN KEY ("record_id") REFERENCES "public"."records"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "domain_tag_assignments" ADD CONSTRAINT "domain_tag_assignments_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "domain_tag_assignments" ADD CONSTRAINT "domain_tag_assignments_tag_id_domain_tags_id_fk" FOREIGN KEY ("tag_id") REFERENCES "public"."domain_tags"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "domain_tags" ADD CONSTRAINT "domain_tags_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "domains" ADD CONSTRAINT "domains_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "domains" ADD CONSTRAINT "domains_verified_by_users_id_fk" FOREIGN KEY ("verified_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "forensic_reports" ADD CONSTRAINT "forensic_reports_domain_id_domains_id_fk" FOREIGN KEY ("domain_id") REFERENCES "public"."domains"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -437,6 +487,9 @@ ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_organization_id_organizations_id
 ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_domain_filter_domains_id_fk" FOREIGN KEY ("domain_filter") REFERENCES "public"."domains"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "accounts_provider_idx" ON "accounts" USING btree ("provider","provider_account_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "ai_integrations_org_idx" ON "ai_integrations" USING btree ("organization_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "ai_cache_domain_idx" ON "ai_recommendations_cache" USING btree ("domain_id");--> statement-breakpoint
+CREATE INDEX "ai_cache_expires_idx" ON "ai_recommendations_cache" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "alert_rules_org_idx" ON "alert_rules" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "alert_rules_domain_idx" ON "alert_rules" USING btree ("domain_id");--> statement-breakpoint
 CREATE INDEX "alert_rules_enabled_idx" ON "alert_rules" USING btree ("is_enabled");--> statement-breakpoint
@@ -452,6 +505,8 @@ CREATE INDEX "audit_logs_created_idx" ON "audit_logs" USING btree ("created_at")
 CREATE INDEX "data_exports_org_idx" ON "data_exports" USING btree ("organization_id");--> statement-breakpoint
 CREATE INDEX "data_exports_status_idx" ON "data_exports" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "data_exports_created_idx" ON "data_exports" USING btree ("created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "domain_tag_assignments_idx" ON "domain_tag_assignments" USING btree ("domain_id","tag_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "domain_tags_org_name_idx" ON "domain_tags" USING btree ("organization_id","name");--> statement-breakpoint
 CREATE UNIQUE INDEX "domains_org_domain_idx" ON "domains" USING btree ("organization_id","domain");--> statement-breakpoint
 CREATE INDEX "domains_domain_idx" ON "domains" USING btree ("domain");--> statement-breakpoint
 CREATE INDEX "forensic_reports_domain_idx" ON "forensic_reports" USING btree ("domain_id");--> statement-breakpoint

@@ -24,6 +24,7 @@ import {
   CalendarClock,
   HelpCircle,
   Database,
+  Sparkles,
 } from 'lucide-react';
 
 import {
@@ -449,6 +450,19 @@ export function AppSidebar({
                         <Link href={`/orgs/${orgSlug}/settings/jobs`}>
                           <Activity className="h-4 w-4" />
                           <span>Background Jobs</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageSettings && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/integrations`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/integrations`}>
+                          <Sparkles className="h-4 w-4" />
+                          <span>AI Integrations</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

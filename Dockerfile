@@ -9,8 +9,8 @@ WORKDIR /app
 # Install dependencies needed for native modules
 RUN apk add --no-cache libc6-compat
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy package files and npm config
+COPY package.json package-lock.json* .npmrc* ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
@@ -75,7 +75,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
 # Copy package files and install production dependencies
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* .npmrc* ./
 RUN npm ci --omit=dev
 
 # Copy source files needed for workers

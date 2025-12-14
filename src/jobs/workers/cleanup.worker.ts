@@ -15,9 +15,11 @@ import {
   organizations,
   sessions,
   dataExports,
+  gmailAccounts,
 } from '@/db/schema';
-import { eq, and, lt, lte, isNull, sql } from 'drizzle-orm';
+import { eq, and, lt, lte, isNull, isNotNull, sql, inArray } from 'drizzle-orm';
 import { scheduleCleanupJobs } from '../scheduler';
+import { sendVerificationLapseEmail } from '@/lib/email-service';
 
 async function cleanupDataRetention(): Promise<number> {
   console.log('[Cleanup] Running data retention cleanup...');
@@ -205,6 +207,104 @@ async function cleanupExpiredExports(): Promise<number> {
   return result.length;
 }
 
+async function sendVerificationLapseNotifications(): Promise<number> {
+  console.log('[Cleanup] Sending verification lapse notifications...');
+
+  // Find domains with lapsed verification that haven't been notified yet
+  const lapsedDomains = await db
+    .select({
+      id: domains.id,
+      domain: domains.domain,
+      organizationId: domains.organizationId,
+      verificationToken: domains.verificationToken,
+      verificationLapsedAt: domains.verificationLapsedAt,
+    })
+    .from(domains)
+    .where(
+      and(
+        isNotNull(domains.verificationLapsedAt),
+        isNull(domains.verificationLapseNotifiedAt)
+      )
+    );
+
+  if (lapsedDomains.length === 0) {
+    console.log('[Cleanup] No verification lapse notifications to send');
+    return 0;
+  }
+
+  // Group domains by organization
+  const domainsByOrg = new Map<string, typeof lapsedDomains>();
+  for (const domain of lapsedDomains) {
+    const orgDomains = domainsByOrg.get(domain.organizationId) || [];
+    orgDomains.push(domain);
+    domainsByOrg.set(domain.organizationId, orgDomains);
+  }
+
+  let notificationsSent = 0;
+
+  for (const [organizationId, orgDomains] of domainsByOrg) {
+    // Check if org has verification lapse notifications enabled
+    const [gmailAccount] = await db
+      .select({
+        notifyVerificationLapse: gmailAccounts.notifyVerificationLapse,
+        sendEnabled: gmailAccounts.sendEnabled,
+      })
+      .from(gmailAccounts)
+      .where(
+        and(
+          eq(gmailAccounts.organizationId, organizationId),
+          eq(gmailAccounts.sendEnabled, true)
+        )
+      )
+      .limit(1);
+
+    if (!gmailAccount || !gmailAccount.notifyVerificationLapse) {
+      console.log(`[Cleanup] Verification lapse notifications disabled for org ${organizationId}`);
+      // Still mark as notified so we don't keep checking
+      const domainIds = orgDomains.map(d => d.id);
+      await db
+        .update(domains)
+        .set({ verificationLapseNotifiedAt: new Date() })
+        .where(inArray(domains.id, domainIds));
+      continue;
+    }
+
+    // Send aggregate email
+    const domainsForEmail = orgDomains.map(d => ({
+      domain: d.domain,
+      domainId: d.id,
+      verificationToken: d.verificationToken!,
+      lapsedAt: d.verificationLapsedAt!,
+    }));
+
+    try {
+      const result = await sendVerificationLapseEmail({
+        organizationId,
+        domains: domainsForEmail,
+      });
+
+      if (result.success) {
+        console.log(`[Cleanup] Sent verification lapse email for org ${organizationId} (${orgDomains.length} domains)`);
+        notificationsSent++;
+      } else {
+        console.error(`[Cleanup] Failed to send verification lapse email: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`[Cleanup] Error sending verification lapse email:`, error);
+    }
+
+    // Mark domains as notified (even if email failed - to prevent spam)
+    const domainIds = orgDomains.map(d => d.id);
+    await db
+      .update(domains)
+      .set({ verificationLapseNotifiedAt: new Date() })
+      .where(inArray(domains.id, domainIds));
+  }
+
+  console.log(`[Cleanup] Sent ${notificationsSent} verification lapse notification emails`);
+  return notificationsSent;
+}
+
 async function processCleanup(job: Job<CleanupJobData>): Promise<CleanupResult> {
   const { type, organizationId } = job.data;
 
@@ -230,6 +330,10 @@ async function processCleanup(job: Job<CleanupJobData>): Promise<CleanupResult> 
 
     case 'expired_exports':
       result.deletedExports = await cleanupExpiredExports();
+      break;
+
+    case 'verification_lapse_notifications':
+      await sendVerificationLapseNotifications();
       break;
 
     default:

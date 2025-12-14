@@ -286,15 +286,26 @@ export async function GET(request: Request, { params }: RouteParams) {
         }
       }
     } else if (currentPolicy === 'reject') {
-      // Already at reject - check if it's working well
+      // Already at reject - stay at reject by default, only downgrade for severe issues
+      recommendedPolicy = 'reject';
+
       if (passRate30Days >= 95) {
-        recommendedPolicy = 'reject';
         confidence = 95;
         achievements.push('Reject policy working effectively');
-      } else {
-        recommendedPolicy = 'quarantine';
+      } else if (passRate30Days >= 85) {
+        confidence = 80;
+        blockers.push(`Pass rate at ${passRate30Days}% - monitor closely but policy is working`);
+      } else if (passRate30Days >= 70) {
         confidence = 60;
-        blockers.push('Pass rate has dropped - consider relaxing policy temporarily');
+        blockers.push(`Pass rate at ${passRate30Days}% - investigate failing sources`);
+      } else if (passRate30Days < 70 && daysMonitored >= 14) {
+        // Only suggest downgrade for sustained severe issues
+        recommendedPolicy = 'quarantine';
+        confidence = 40;
+        blockers.push('Severe pass rate drop - consider temporary policy relaxation while investigating');
+      } else {
+        confidence = 50;
+        blockers.push(`Low pass rate (${passRate30Days}%) - investigation needed`);
       }
     }
 

@@ -32,7 +32,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { DomainVerification } from '@/components/domains/domain-verification';
-import { DmarcRecordCard } from '@/components/domains/dmarc-record-card';
+import { DnsRecordsCard } from '@/components/domains/dns-records-card';
 import { DomainStats } from '@/components/domains/domain-stats';
 import { PolicyRecommendations } from '@/components/domains/policy-recommendations';
 import { DomainTagsManager } from '@/components/domains/domain-tags-manager';
@@ -182,6 +182,7 @@ export default async function DomainPage({ params }: PageProps) {
   ]);
 
   const isVerified = !!domain.verifiedAt;
+  const isVerificationLapsed = !!domain.verificationLapsedAt;
   const canManage = ['owner', 'admin', 'member'].includes(role);
 
   return (
@@ -197,10 +198,15 @@ export default async function DomainPage({ params }: PageProps) {
               <h1 className="text-2xl font-bold tracking-tight">
                 {domain.domain}
               </h1>
-              {isVerified ? (
+              {isVerified && !isVerificationLapsed ? (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" />
                   Verified
+                </Badge>
+              ) : isVerified && isVerificationLapsed ? (
+                <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
+                  <AlertTriangle className="h-3 w-3" />
+                  Verification Lapsed
                 </Badge>
               ) : (
                 <Badge variant="outline" className="gap-1 text-yellow-600">
@@ -258,6 +264,43 @@ export default async function DomainPage({ params }: PageProps) {
         />
       )}
 
+      {/* Verification Lapsed Warning */}
+      {isVerified && isVerificationLapsed && (
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-orange-800 dark:text-orange-200">
+                  Domain verification has lapsed
+                </p>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                  The verification DNS record for this domain could not be found. This may indicate
+                  that the record was removed or domain ownership has changed. DMARC monitoring
+                  continues but we recommend re-adding the verification record.
+                </p>
+                <div className="mt-3 p-3 bg-orange-100 dark:bg-orange-900/30 rounded-md">
+                  <p className="text-xs text-orange-700 dark:text-orange-300 font-medium mb-1">
+                    Add this TXT record to restore verification:
+                  </p>
+                  <div className="text-xs font-mono text-orange-800 dark:text-orange-200">
+                    <p><span className="text-orange-600">Name:</span> _dmarc-verify.{domain.domain}</p>
+                    <p><span className="text-orange-600">Value:</span> {domain.verificationToken}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                  Lapsed on {new Date(domain.verificationLapsedAt!).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Data Hidden Warning (if not verified) */}
       {!isVerified && (
         <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
@@ -288,19 +331,20 @@ export default async function DomainPage({ params }: PageProps) {
         />
       )}
 
-      {/* DMARC Record Card and Policy Recommendations */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DmarcRecordCard
-          domain={domain.domain}
-          domainId={domainId}
-          orgSlug={slug}
-          dmarcRecord={domain.dmarcRecord}
-        />
-        <PolicyRecommendations
-          orgSlug={slug}
-          domainId={domainId}
-        />
-      </div>
+      {/* DNS Records Card */}
+      <DnsRecordsCard
+        domain={domain.domain}
+        domainId={domainId}
+        orgSlug={slug}
+        dmarcRecord={domain.dmarcRecord}
+        spfRecord={domain.spfRecord}
+      />
+
+      {/* Policy Recommendations */}
+      <PolicyRecommendations
+        orgSlug={slug}
+        domainId={domainId}
+      />
 
       {/* Subdomain Summary (only show if verified) */}
       {isVerified && subdomainStats.totalSubdomains > 0 && (

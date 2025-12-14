@@ -39,6 +39,7 @@ import {
 import { SourcesEnrichment } from '@/components/domains/sources-enrichment';
 import { AutoMatchButton } from '@/components/sources/auto-match-button';
 import { ExportButton } from '@/components/export-button';
+import { SourcesWorldMap } from '@/components/maps/sources-world-map';
 
 interface PageProps {
   params: Promise<{ slug: string; domainId: string }>;
@@ -255,6 +256,9 @@ export default async function SourcesPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Geographic Map */}
+      <SourcesWorldMap orgSlug={slug} domainId={domainId} />
 
       {/* Sources Table */}
       <Card>

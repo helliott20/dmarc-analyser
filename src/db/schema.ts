@@ -161,6 +161,7 @@ export const gmailAccounts = pgTable('gmail_accounts', {
   syncEnabled: boolean('sync_enabled').default(true).notNull(),
   sendEnabled: boolean('send_enabled').default(false).notNull(), // Whether account is authorized for sending
   notifyNewDomains: boolean('notify_new_domains').default(true).notNull(), // Email notify when new domains discovered
+  notifyVerificationLapse: boolean('notify_verification_lapse').default(true).notNull(), // Email notify when domain verification lapses
   archiveLabelId: varchar('archive_label_id', { length: 100 }),
   // Sync progress tracking
   syncStatus: varchar('sync_status', { length: 20 }).default('idle'), // 'idle' | 'syncing'
@@ -186,6 +187,8 @@ export const domains = pgTable('domains', {
   verificationMethod: verificationMethodEnum('verification_method').default('dns_txt'),
   verifiedAt: timestamp('verified_at'),
   verifiedBy: uuid('verified_by').references(() => users.id),
+  verificationLapsedAt: timestamp('verification_lapsed_at'), // Set when verification TXT record is no longer found
+  verificationLapseNotifiedAt: timestamp('verification_lapse_notified_at'), // When we last sent a lapse notification
 
   // DNS Records (cached)
   dmarcRecord: text('dmarc_record'),
@@ -600,6 +603,52 @@ export const dataExports = pgTable('data_exports', {
   index('data_exports_created_idx').on(table.createdAt),
 ]);
 
+// ============ AI INTEGRATIONS ============
+
+export const aiIntegrations = pgTable('ai_integrations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull().unique(),
+
+  // Gemini API key (stored like Gmail tokens)
+  geminiApiKey: text('gemini_api_key'),
+  geminiApiKeySetAt: timestamp('gemini_api_key_set_at'),
+
+  // Usage tracking for rate limiting
+  lastUsedAt: timestamp('last_used_at'),
+  usageCount24h: integer('usage_count_24h').default(0).notNull(),
+  usageResetAt: timestamp('usage_reset_at'),
+
+  // Status
+  isEnabled: boolean('is_enabled').default(true).notNull(),
+  lastError: text('last_error'),
+  lastErrorAt: timestamp('last_error_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('ai_integrations_org_idx').on(table.organizationId),
+]);
+
+// ============ AI RECOMMENDATIONS CACHE ============
+
+export const aiRecommendationsCache = pgTable('ai_recommendations_cache', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  domainId: uuid('domain_id').references(() => domains.id, { onDelete: 'cascade' }).notNull().unique(),
+
+  // Cached response
+  recommendation: jsonb('recommendation').notNull(),
+  inputHash: varchar('input_hash', { length: 64 }).notNull(), // SHA-256 of input context
+
+  // Metadata
+  generatedAt: timestamp('generated_at').notNull(),
+  expiresAt: timestamp('expires_at').notNull(), // 24 hours from generation
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('ai_cache_domain_idx').on(table.domainId),
+  index('ai_cache_expires_idx').on(table.expiresAt),
+]);
+
 // ============ RELATIONS ============
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -627,6 +676,7 @@ export const organizationsRelations = relations(organizations, ({ one, many }) =
   scheduledReports: many(scheduledReports),
   dataExports: many(dataExports),
   invitations: many(invitations),
+  aiIntegration: one(aiIntegrations, { fields: [organizations.id], references: [aiIntegrations.organizationId] }),
 }));
 
 export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
@@ -644,6 +694,7 @@ export const domainsRelations = relations(domains, ({ one, many }) => ({
   subdomains: many(subdomains),
   alerts: many(alerts),
   alertRules: many(alertRules),
+  aiRecommendationCache: one(aiRecommendationsCache, { fields: [domains.id], references: [aiRecommendationsCache.domainId] }),
 }));
 
 export const reportsRelations = relations(reports, ({ one, many }) => ({
@@ -690,4 +741,12 @@ export const alertRulesRelations = relations(alertRules, ({ one }) => ({
 
 export const subdomainsRelations = relations(subdomains, ({ one }) => ({
   domain: one(domains, { fields: [subdomains.domainId], references: [domains.id] }),
+}));
+
+export const aiIntegrationsRelations = relations(aiIntegrations, ({ one }) => ({
+  organization: one(organizations, { fields: [aiIntegrations.organizationId], references: [organizations.id] }),
+}));
+
+export const aiRecommendationsCacheRelations = relations(aiRecommendationsCache, ({ one }) => ({
+  domain: one(domains, { fields: [aiRecommendationsCache.domainId], references: [domains.id] }),
 }));

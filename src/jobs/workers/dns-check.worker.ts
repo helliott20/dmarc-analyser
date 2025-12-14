@@ -13,9 +13,10 @@ interface DnsRecords {
   dmarc?: string;
   spf?: string;
   hasDkim?: boolean;
+  verificationTxt?: string;
 }
 
-async function fetchDnsRecords(domain: string): Promise<DnsRecords> {
+async function fetchDnsRecords(domain: string, verificationToken?: string | null): Promise<DnsRecords> {
   const result: DnsRecords = {};
 
   try {
@@ -44,6 +45,18 @@ async function fetchDnsRecords(domain: string): Promise<DnsRecords> {
       }
     }
 
+    // Check for verification TXT record if we have a token to check against
+    if (verificationToken) {
+      try {
+        const verifyRecords = await dns.resolveTxt(`_dmarc-verify.${domain}`);
+        const verifyRecord = verifyRecords.flat().find((r) => r === verificationToken);
+        result.verificationTxt = verifyRecord || undefined;
+      } catch {
+        // Verification record doesn't exist
+        result.verificationTxt = undefined;
+      }
+    }
+
     return result;
   } catch (error) {
     console.error(`[DNS Check] Error fetching DNS for ${domain}:`, error);
@@ -63,6 +76,9 @@ async function processDnsCheck(job: Job<DnsCheckJobData>): Promise<void> {
       domain: domains.domain,
       dmarcRecord: domains.dmarcRecord,
       spfRecord: domains.spfRecord,
+      verificationToken: domains.verificationToken,
+      verifiedAt: domains.verifiedAt,
+      verificationLapsedAt: domains.verificationLapsedAt,
     })
     .from(domains)
     .where(eq(domains.id, domainId));
@@ -72,8 +88,8 @@ async function processDnsCheck(job: Job<DnsCheckJobData>): Promise<void> {
     return;
   }
 
-  // Fetch current DNS records
-  const currentRecords = await fetchDnsRecords(domain.domain);
+  // Fetch current DNS records (including verification check)
+  const currentRecords = await fetchDnsRecords(domain.domain, domain.verificationToken);
 
   // Check for changes
   const dmarcChanged = domain.dmarcRecord !== (currentRecords.dmarc || null);
@@ -100,6 +116,25 @@ async function processDnsCheck(job: Job<DnsCheckJobData>): Promise<void> {
     });
   }
 
+  // Check for verification lapse (only for verified domains with a token)
+  let verificationLapsed = false;
+  let verificationRestored = false;
+
+  if (domain.verifiedAt && domain.verificationToken) {
+    const verificationRecordMissing = !currentRecords.verificationTxt;
+    const wasAlreadyLapsed = !!domain.verificationLapsedAt;
+
+    if (verificationRecordMissing && !wasAlreadyLapsed) {
+      // Verification has just lapsed - aggregate notification job will send email
+      verificationLapsed = true;
+      console.log(`[DNS Check] Verification lapsed for ${domain.domain} - TXT record not found`);
+    } else if (!verificationRecordMissing && wasAlreadyLapsed) {
+      // Verification has been restored
+      verificationRestored = true;
+      console.log(`[DNS Check] Verification restored for ${domain.domain}`);
+    }
+  }
+
   // Update domain with current DNS records
   await db
     .update(domains)
@@ -108,6 +143,10 @@ async function processDnsCheck(job: Job<DnsCheckJobData>): Promise<void> {
       spfRecord: currentRecords.spf || null,
       lastDnsCheck: new Date(),
       updatedAt: new Date(),
+      // Set verificationLapsedAt when verification lapses, clear notified flag for aggregate email
+      ...(verificationLapsed ? { verificationLapsedAt: new Date(), verificationLapseNotifiedAt: null } : {}),
+      // Clear both when restored
+      ...(verificationRestored ? { verificationLapsedAt: null, verificationLapseNotifiedAt: null } : {}),
     })
     .where(eq(domains.id, domainId));
 

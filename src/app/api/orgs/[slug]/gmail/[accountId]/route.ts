@@ -74,6 +74,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.notifyNewDomains = body.notifyNewDomains;
     }
 
+    // Handle notifyVerificationLapse toggle
+    if (typeof body.notifyVerificationLapse === 'boolean') {
+      updateData.notifyVerificationLapse = body.notifyVerificationLapse;
+    }
+
     // Handle resetting lastSyncAt (for "Import All" functionality)
     if (body.resetLastSync === true) {
       updateData.lastSyncAt = null;

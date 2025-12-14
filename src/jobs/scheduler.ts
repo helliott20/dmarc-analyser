@@ -168,6 +168,7 @@ export async function scheduleCleanupJobs() {
     'unverified_domains',
     'expired_sessions',
     'expired_exports',
+    'verification_lapse_notifications',
   ];
 
   for (const type of cleanupTypes) {

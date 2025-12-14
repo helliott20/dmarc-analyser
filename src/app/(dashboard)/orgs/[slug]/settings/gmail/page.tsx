@@ -51,6 +51,7 @@ async function getGmailAccounts(orgId: string) {
       syncEnabled: gmailAccounts.syncEnabled,
       sendEnabled: gmailAccounts.sendEnabled,
       notifyNewDomains: gmailAccounts.notifyNewDomains,
+      notifyVerificationLapse: gmailAccounts.notifyVerificationLapse,
       lastSyncAt: gmailAccounts.lastSyncAt,
       createdAt: gmailAccounts.createdAt,
       syncStatus: gmailAccounts.syncStatus,
@@ -169,7 +170,7 @@ export default async function GmailSettingsPage({ params }: PageProps) {
 
       {/* Email Sending */}
       <EmailSendingCard
-        accounts={accounts.map(a => ({ id: a.id, email: a.email, sendEnabled: a.sendEnabled, notifyNewDomains: a.notifyNewDomains }))}
+        accounts={accounts.map(a => ({ id: a.id, email: a.email, sendEnabled: a.sendEnabled, notifyNewDomains: a.notifyNewDomains, notifyVerificationLapse: a.notifyVerificationLapse }))}
         orgSlug={slug}
         orgId={organization.id}
       />

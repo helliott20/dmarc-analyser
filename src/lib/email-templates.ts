@@ -704,3 +704,130 @@ Sent by ${org.name} via DMARC Analyser
     subject: `${domainCount} New ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Found in DMARC Reports`,
   };
 }
+
+// ============================================
+// VERIFICATION LAPSE EMAIL (Aggregate Report)
+// ============================================
+
+export interface LapsedDomain {
+  domain: string;
+  domainId: string;
+  verificationToken: string;
+  lapsedAt: Date;
+}
+
+export interface VerificationLapseEmailOptions {
+  org: OrgBranding;
+  domains: LapsedDomain[];
+  domainsUrl: string;
+}
+
+export function generateVerificationLapseEmail(options: VerificationLapseEmailOptions): { html: string; text: string; subject: string } {
+  const { org, domains, domainsUrl } = options;
+  const primaryColor = org.primaryColor || '#3B82F6';
+
+  const domainCount = domains.length;
+  const domainWord = domainCount === 1 ? 'domain' : 'domains';
+
+  const domainListHtml = domains.slice(0, 10).map(d => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #fecaca;">
+        <p style="margin: 0 0 4px; font-weight: 500; color: #18181b;">${d.domain}</p>
+        <p style="margin: 0; font-size: 12px; color: #71717a;">
+          Lapsed ${new Date(d.lapsedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #fecaca; vertical-align: top;">
+        <p style="margin: 0; font-size: 11px; color: #71717a;">TXT Record:</p>
+        <p style="margin: 2px 0 0; font-size: 11px; font-family: monospace; color: #991b1b; word-break: break-all;">_dmarc-verify.${d.domain}</p>
+      </td>
+    </tr>
+  `).join('');
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; width: 64px; height: 64px; background-color: #fef2f2; border-radius: 50%; line-height: 64px;">
+        <span style="font-size: 32px;">⚠️</span>
+      </div>
+    </div>
+
+    <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 600; color: #18181b; text-align: center;">
+      ${domainCount} ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Verification Lapsed
+    </h1>
+
+    <p style="margin: 0 0 24px; font-size: 16px; color: #3f3f46; line-height: 1.6; text-align: center;">
+      The verification DNS records for the following ${domainWord} could not be found. This may indicate that the records were removed or domain ownership has changed.
+    </p>
+
+    ${getInfoBox(`
+      <p style="margin: 0 0 8px; font-size: 14px; color: #991b1b;">
+        <strong>What this means:</strong>
+      </p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #dc2626;">
+        <li>DMARC monitoring will continue but with a warning</li>
+        <li>Domain ownership cannot be verified</li>
+        <li>Re-add the verification TXT records to restore verification</li>
+      </ul>
+    `, '#fef2f2', '#ef4444')}
+
+    <p style="margin: 24px 0 12px; font-size: 14px; font-weight: 500; color: #18181b;">
+      Affected Domains
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border-radius: 8px; margin-bottom: 24px;">
+      <tbody>
+        ${domainListHtml}
+        ${domains.length > 10 ? `
+          <tr>
+            <td colspan="2" style="padding: 12px; text-align: center; color: #71717a; font-size: 14px;">
+              ...and ${domains.length - 10} more
+            </td>
+          </tr>
+        ` : ''}
+      </tbody>
+    </table>
+
+    <p style="margin: 0 0 8px; font-size: 14px; color: #52525b; line-height: 1.6; text-align: center;">
+      Visit each domain's settings page to see the verification TXT record value and restore verification.
+    </p>
+
+    <div style="text-align: center;">
+      ${getButton('View Domains', domainsUrl, primaryColor)}
+    </div>
+  `;
+
+  const domainListText = domains.slice(0, 10).map(d =>
+    `  - ${d.domain}\n    Record: _dmarc-verify.${d.domain}\n    Lapsed: ${new Date(d.lapsedAt).toLocaleDateString('en-GB')}`
+  ).join('\n');
+
+  const text = `
+${domainCount} ${domainWord.charAt(0).toUpperCase() + domainWord.slice(1)} Verification Lapsed
+
+The verification DNS records for the following ${domainWord} could not be found. This may indicate that the records were removed or domain ownership has changed.
+
+What this means:
+- DMARC monitoring will continue but with a warning
+- Domain ownership cannot be verified
+- Re-add the verification TXT records to restore verification
+
+Affected Domains:
+${domainListText}
+${domains.length > 10 ? `  ...and ${domains.length - 10} more\n` : ''}
+
+Visit each domain's settings page to see the verification TXT record value and restore verification:
+${domainsUrl}
+
+---
+Sent by ${org.name} via DMARC Analyser
+  `.trim();
+
+  const subject = domainCount === 1
+    ? `⚠️ Domain Verification Lapsed: ${domains[0].domain}`
+    : `⚠️ ${domainCount} Domains Verification Lapsed`;
+
+  return {
+    html: getBaseTemplate({ org, previewText: `${domainCount} ${domainWord} verification lapsed - DNS records not found` }, content),
+    text,
+    subject,
+  };
+}

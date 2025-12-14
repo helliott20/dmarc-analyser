@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Send, Loader2, Mail, CheckCircle2, AlertTriangle, KeyRound, Plus, Globe } from 'lucide-react';
+import { Send, Loader2, Mail, CheckCircle2, AlertTriangle, KeyRound, Plus, Globe, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GmailAccount {
@@ -27,6 +27,7 @@ interface GmailAccount {
   email: string;
   sendEnabled: boolean;
   notifyNewDomains?: boolean;
+  notifyVerificationLapse?: boolean;
 }
 
 interface EmailSendingCardProps {
@@ -52,6 +53,7 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
   // Notification settings (applies to the first account)
   const primaryAccount = accounts[0];
   const [notifyNewDomains, setNotifyNewDomains] = useState(primaryAccount?.notifyNewDomains ?? true);
+  const [notifyVerificationLapse, setNotifyVerificationLapse] = useState(primaryAccount?.notifyVerificationLapse ?? true);
 
   const handleAuthorise = async (accountId: string) => {
     setIsAuthorizing(true);
@@ -72,7 +74,7 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
     }
   };
 
-  const handleToggleNotify = async (enabled: boolean) => {
+  const handleToggleNotifyNewDomains = async (enabled: boolean) => {
     if (!primaryAccount) return;
 
     try {
@@ -88,6 +90,27 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
 
       setNotifyNewDomains(enabled);
       toast.success(enabled ? 'Domain discovery emails enabled' : 'Domain discovery emails disabled');
+    } catch {
+      toast.error('Failed to update notification settings');
+    }
+  };
+
+  const handleToggleNotifyVerificationLapse = async (enabled: boolean) => {
+    if (!primaryAccount) return;
+
+    try {
+      const response = await fetch(`/api/orgs/${orgSlug}/gmail/${primaryAccount.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyVerificationLapse: enabled }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update');
+      }
+
+      setNotifyVerificationLapse(enabled);
+      toast.success(enabled ? 'Verification lapse emails enabled' : 'Verification lapse emails disabled');
     } catch {
       toast.error('Failed to update notification settings');
     }
@@ -314,20 +337,37 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
         {/* Options */}
         <div className="pt-4 border-t">
           <h4 className="text-sm font-medium mb-3">Options</h4>
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">Domain discovery notifications</p>
-                <p className="text-xs text-muted-foreground">
-                  Email when new domains are found in DMARC reports
-                </p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Domain discovery notifications</p>
+                  <p className="text-xs text-muted-foreground">
+                    Email when new domains are found in DMARC reports
+                  </p>
+                </div>
               </div>
+              <Switch
+                checked={notifyNewDomains}
+                onCheckedChange={handleToggleNotifyNewDomains}
+              />
             </div>
-            <Switch
-              checked={notifyNewDomains}
-              onCheckedChange={handleToggleNotify}
-            />
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Verification lapse notifications</p>
+                  <p className="text-xs text-muted-foreground">
+                    Email when domain verification DNS records are removed
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={notifyVerificationLapse}
+                onCheckedChange={handleToggleNotifyVerificationLapse}
+              />
+            </div>
           </div>
         </div>
       </CardContent>

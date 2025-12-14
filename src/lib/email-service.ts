@@ -20,6 +20,7 @@ import {
   generateReportEmail,
   generateTestEmail,
   generateDomainDiscoveryEmail,
+  generateVerificationLapseEmail,
   type OrgBranding,
   type InvitationEmailOptions,
   type AlertEmailOptions,
@@ -342,6 +343,81 @@ export async function sendDomainDiscoveryEmail(params: {
   const domainsUrl = `${getAppUrl()}/orgs/${orgData.slug}/domains`;
 
   const { html, text, subject } = generateDomainDiscoveryEmail({
+    org: orgData,
+    domains,
+    domainsUrl,
+  });
+
+  return sendOrgEmail(organizationId, recipients, subject, html, text);
+}
+
+/**
+ * Send verification lapse notification email (aggregate report)
+ */
+export async function sendVerificationLapseEmail(params: {
+  organizationId: string;
+  domains: Array<{
+    domain: string;
+    domainId: string;
+    verificationToken: string;
+    lapsedAt: Date;
+  }>;
+}): Promise<{ success: boolean; error?: string }> {
+  const { organizationId, domains } = params;
+
+  if (domains.length === 0) {
+    return { success: true }; // Nothing to send
+  }
+
+  // Get org branding and slug
+  const [orgData] = await db
+    .select({
+      name: organizations.name,
+      slug: organizations.slug,
+      logoUrl: organizations.logoUrl,
+      primaryColor: organizations.primaryColor,
+      accentColor: organizations.accentColor,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  if (!orgData) {
+    return { success: false, error: 'Organisation not found' };
+  }
+
+  // Get org admins/owners to notify
+  const { orgMembers } = await import('@/db/schema');
+  const { inArray } = await import('drizzle-orm');
+
+  const adminMembers = await db
+    .select({ userId: orgMembers.userId })
+    .from(orgMembers)
+    .where(
+      and(
+        eq(orgMembers.organizationId, organizationId),
+        inArray(orgMembers.role, ['owner', 'admin'])
+      )
+    );
+
+  if (adminMembers.length === 0) {
+    return { success: false, error: 'No admin recipients found' };
+  }
+
+  const adminUsers = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(inArray(users.id, adminMembers.map(m => m.userId)));
+
+  const recipients = adminUsers.map(u => u.email).filter((e): e is string => !!e);
+
+  if (recipients.length === 0) {
+    return { success: false, error: 'No admin email addresses found' };
+  }
+
+  const domainsUrl = `${getAppUrl()}/orgs/${orgData.slug}/domains`;
+
+  const { html, text, subject } = generateVerificationLapseEmail({
     org: orgData,
     domains,
     domainsUrl,
