@@ -6,6 +6,7 @@ import {
   dnsCheckQueue,
   scheduledReportsQueue,
   cleanupQueue,
+  billingQueue,
 } from './queues';
 import type {
   GmailSyncJobData,
@@ -13,6 +14,8 @@ import type {
   ScheduledReportJobData,
   CleanupJobData,
 } from './types';
+import type { BillingJobData } from './workers/billing.worker';
+import { isSaasMode } from '@/lib/config';
 
 // Schedule Gmail sync for all connected accounts (every 15 minutes)
 export async function scheduleGmailSyncJobs() {
@@ -240,6 +243,35 @@ export async function setupRepeatableJobs() {
   );
   console.log('[Scheduler] Added Cleanup (daily at 2am)');
 
+  // Billing jobs - only in SaaS mode
+  if (isSaasMode()) {
+    // Usage reporting - daily at 1am (before billing cycle typically ends)
+    await billingQueue.add(
+      'billing-usage-scheduler',
+      { type: 'report_usage' } as BillingJobData,
+      {
+        repeat: {
+          pattern: '0 1 * * *', // Daily at 1am
+        },
+      }
+    );
+    console.log('[Scheduler] Added Billing usage reporting (daily at 1am)');
+
+    // Trial check - daily at 9am (good time for reminder emails)
+    await billingQueue.add(
+      'billing-trial-scheduler',
+      { type: 'check_trials' } as BillingJobData,
+      {
+        repeat: {
+          pattern: '0 9 * * *', // Daily at 9am
+        },
+      }
+    );
+    console.log('[Scheduler] Added Billing trial check (daily at 9am)');
+  } else {
+    console.log('[Scheduler] Billing jobs skipped (self-hosted mode)');
+  }
+
   console.log('[Scheduler] Repeatable jobs configured');
 }
 
@@ -250,6 +282,7 @@ export async function removeRepeatableJobs() {
     dnsCheckQueue,
     scheduledReportsQueue,
     cleanupQueue,
+    billingQueue,
   ];
 
   for (const queue of queuesWithRepeat) {

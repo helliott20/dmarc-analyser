@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { organizations, orgMembers } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { isSaasMode, PRICING } from '@/lib/config';
 
 export async function POST(request: Request) {
   try {
@@ -44,6 +45,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Set trial end date for SaaS mode
+    let trialEndsAt: Date | undefined;
+    if (isSaasMode()) {
+      trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + PRICING.trialDays);
+    }
+
     // Create organization
     const [org] = await db
       .insert(organizations)
@@ -51,6 +59,8 @@ export async function POST(request: Request) {
         name,
         slug,
         createdBy: session.user.id,
+        subscriptionStatus: isSaasMode() ? 'trialing' : 'active',
+        trialEndsAt: trialEndsAt || null,
       })
       .returning();
 

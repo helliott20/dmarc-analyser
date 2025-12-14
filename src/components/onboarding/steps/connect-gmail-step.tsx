@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mail, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mail, CheckCircle2, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import type { StepData } from '../onboarding-wizard';
 
@@ -62,23 +62,48 @@ export function ConnectGmailStep({
             <Mail className="h-8 w-8 text-primary" />
           </div>
         </div>
-        <h2 className="text-2xl font-bold">Connect Gmail (Optional)</h2>
+        <h2 className="text-2xl font-bold">Set Up DMARC Report Collection</h2>
         <p className="text-muted-foreground">
-          Automatically import DMARC reports from your Gmail inbox
+          Connect a Gmail account to receive and automatically import DMARC reports
+        </p>
+      </div>
+
+      {/* Important Setup Info */}
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-lg max-w-md mx-auto">
+        <div className="flex gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">Important: 2-Step Setup Required</h4>
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              To receive DMARC reports, you need to:
+            </p>
+            <ol className="text-sm text-amber-800 dark:text-amber-300 mt-2 space-y-1 list-decimal list-inside">
+              <li><strong>Connect a Gmail account</strong> below</li>
+              <li><strong>Update your domain&apos;s DMARC record</strong> to send reports to that email</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      {/* Step 1: Connect Gmail */}
+      <div className="space-y-3 max-w-md mx-auto">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">1</div>
+          <h3 className="font-semibold">Connect Your Gmail Account</h3>
+        </div>
+        <p className="text-sm text-muted-foreground ml-8">
+          This is the email address where DMARC reports will be sent. Choose an account you have access to - it can be a dedicated reporting address or your regular email.
         </p>
       </div>
 
       {/* Benefits */}
-      <div className="space-y-3 max-w-md mx-auto">
-        <h3 className="font-semibold text-center mb-4">Why Connect Gmail?</h3>
-
+      <div className="space-y-3 max-w-md mx-auto bg-muted/50 p-4 rounded-lg">
         <div className="flex gap-3">
           <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">Automatic Import</p>
             <p className="text-sm text-muted-foreground">
-              DMARC reports are automatically imported from your inbox, no manual
-              upload needed
+              Reports are automatically parsed and imported - no manual uploads
             </p>
           </div>
         </div>
@@ -86,74 +111,32 @@ export function ConnectGmailStep({
         <div className="flex gap-3">
           <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium">Real-time Updates</p>
+            <p className="font-medium">Privacy Protected</p>
             <p className="text-sm text-muted-foreground">
-              Get the latest DMARC data as soon as reports arrive in your inbox
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Organized Inbox</p>
-            <p className="text-sm text-muted-foreground">
-              Processed reports can be automatically labeled and archived
+              We only read DMARC report emails, never your personal messages
             </p>
           </div>
         </div>
       </div>
 
-      {/* Privacy Note */}
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg max-w-md mx-auto">
-        <h4 className="font-medium text-blue-900 mb-2 text-sm">Privacy Note</h4>
-        <p className="text-sm text-blue-800">
-          We only access emails matching DMARC report patterns (subject containing
-          &quot;DMARC&quot; and &quot;Report&quot;). Your regular emails are never
-          accessed or read.
-        </p>
-      </div>
-
-      {/* How it works */}
+      {/* Step 2: Configure DMARC */}
       <div className="space-y-3 max-w-md mx-auto">
-        <h3 className="font-semibold">How it works:</h3>
-        <ol className="space-y-2 text-sm text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">1.</span>
-            <span>
-              You&apos;ll be redirected to Google to grant read-only access to your
-              Gmail
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">2.</span>
-            <span>
-              We&apos;ll search for DMARC aggregate reports in your inbox
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">3.</span>
-            <span>Reports are parsed and imported into your dashboard</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">4.</span>
-            <span>
-              Optionally, processed emails are labeled for easy organization
-            </span>
-          </li>
-        </ol>
-      </div>
-
-      {/* DMARC Configuration Info */}
-      <div className="bg-muted p-4 rounded-lg max-w-md mx-auto">
-        <h4 className="font-medium mb-2 text-sm">Don&apos;t forget to configure your DMARC record!</h4>
-        <p className="text-sm text-muted-foreground mb-2">
-          To receive reports, update your domain&apos;s DMARC DNS record with the
-          RUA tag:
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">2</div>
+          <h3 className="font-semibold">Update Your DMARC DNS Record</h3>
+        </div>
+        <p className="text-sm text-muted-foreground ml-8">
+          After connecting Gmail, add the <code className="bg-muted px-1 rounded">rua</code> tag to your domain&apos;s DMARC record to tell email providers where to send reports:
         </p>
-        <code className="text-xs bg-background p-2 rounded block">
-          v=DMARC1; p=none; rua=mailto:your-email@gmail.com
-        </code>
+        <div className="ml-8 p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
+          <span className="text-slate-400">v=DMARC1; p=none;</span> rua=mailto:<span className="text-green-400">your-email@gmail.com</span>
+        </div>
+        <div className="ml-8 flex gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-800 dark:text-blue-300">
+            Reports typically start arriving within 24-48 hours after updating your DNS. Major providers like Google, Microsoft, and Yahoo send daily aggregate reports.
+          </p>
+        </div>
       </div>
 
       {/* Action Buttons */}

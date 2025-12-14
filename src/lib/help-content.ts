@@ -11,6 +11,7 @@ import {
   Globe,
   CheckCircle2,
   Bell,
+  HardDrive,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,7 +41,8 @@ export type HelpCategory =
   | 'features'
   | 'troubleshooting'
   | 'configuration'
-  | 'reports';
+  | 'reports'
+  | 'self-hosted';
 
 export interface HelpCategoryInfo {
   id: HelpCategory;
@@ -85,6 +87,12 @@ export const helpCategories: HelpCategoryInfo[] = [
     name: 'Troubleshooting',
     description: 'Find solutions to common issues',
     icon: AlertCircle,
+  },
+  {
+    id: 'self-hosted',
+    name: 'Self-Hosted',
+    description: 'Deploy and configure your own instance',
+    icon: HardDrive,
   },
 ];
 
@@ -280,6 +288,30 @@ export const helpArticles: HelpArticle[] = [
       'protection',
     ],
     relatedArticles: ['dmarc-basics', 'troubleshooting'],
+  },
+  {
+    id: 'self-hosted-setup',
+    title: 'Self-Hosted Setup Guide',
+    description: 'Complete guide to deploying and configuring your own DMARC Analyser instance',
+    category: 'self-hosted',
+    icon: HardDrive,
+    href: '/help/self-hosted',
+    content: 'Deploy DMARC Analyser with Docker, configure Google OAuth, Gmail API, and environment variables',
+    keywords: [
+      'self-hosted',
+      'docker',
+      'deploy',
+      'install',
+      'setup',
+      'google oauth',
+      'gmail api',
+      'environment variables',
+      'configuration',
+      'credentials',
+      'client id',
+      'client secret',
+    ],
+    relatedArticles: ['gmail-import', 'getting-started'],
   },
 ];
 

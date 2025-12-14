@@ -5,6 +5,7 @@ import { organizations, orgMembers, domains } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { logAuditEvent, getClientIp, getUserAgent } from '@/lib/audit';
+import { checkBillingAccess } from '@/lib/billing';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -59,6 +60,23 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Domain is required' },
         { status: 400 }
+      );
+    }
+
+    // Check billing access (SaaS mode only)
+    const billingAccess = await checkBillingAccess(membership.organization.id);
+    if (!billingAccess.allowed) {
+      const errorMessages = {
+        trial_expired: 'Your trial has expired. Please subscribe to continue adding domains.',
+        subscription_canceled: 'Your subscription has been canceled. Please resubscribe to continue.',
+        payment_failed: 'Your payment has failed. Please update your payment method.',
+      };
+      return NextResponse.json(
+        {
+          error: errorMessages[billingAccess.reason!] || 'Billing issue detected',
+          billingReason: billingAccess.reason,
+        },
+        { status: 402 } // Payment Required
       );
     }
 

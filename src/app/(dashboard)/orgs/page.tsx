@@ -52,6 +52,11 @@ export default async function OrganizationsPage() {
 
   const userOrgs = await getUserOrganizations(session.user.id);
 
+  // If user has no orgs, redirect to onboarding
+  if (userOrgs.length === 0) {
+    redirect('/onboarding');
+  }
+
   // If user has only one org, redirect to it
   if (userOrgs.length === 1) {
     redirect(`/orgs/${userOrgs[0].slug}`);
@@ -74,56 +79,38 @@ export default async function OrganizationsPage() {
         </Button>
       </div>
 
-      {userOrgs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No organizations yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create your first organization to start monitoring your domains.
-            </p>
-            <Button asChild>
-              <Link href="/orgs/new">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Organization
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {userOrgs.map((org) => (
-            <Link key={org.id} href={`/orgs/${org.slug}`}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <Building2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{org.name}</CardTitle>
-                      <CardDescription className="capitalize">
-                        {org.role}
-                      </CardDescription>
-                    </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {userOrgs.map((org) => (
+          <Link key={org.id} href={`/orgs/${org.slug}`}>
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Building2 className="h-5 w-5 text-primary" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Globe className="h-4 w-4" />
-                      <span>
-                        {org.domainCount}{' '}
-                        {org.domainCount === 1 ? 'domain' : 'domains'}
-                      </span>
-                    </div>
+                  <div>
+                    <CardTitle className="text-lg">{org.name}</CardTitle>
+                    <CardDescription className="capitalize">
+                      {org.role}
+                    </CardDescription>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Globe className="h-4 w-4" />
+                    <span>
+                      {org.domainCount}{' '}
+                      {org.domainCount === 1 ? 'domain' : 'domains'}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

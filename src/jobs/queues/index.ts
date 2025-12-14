@@ -13,6 +13,7 @@ export const QUEUE_NAMES = {
   IP_ENRICHMENT: 'ip-enrichment',
   DATA_EXPORT: 'data-export',
   CLEANUP: 'cleanup',
+  BILLING: 'billing',
 } as const;
 
 // Gmail sync queue - fetch DMARC emails
@@ -139,6 +140,20 @@ export const cleanupQueue = new Queue(QUEUE_NAMES.CLEANUP, {
   },
 });
 
+// Billing queue - usage reporting and trial management (SaaS mode only)
+export const billingQueue = new Queue(QUEUE_NAMES.BILLING, {
+  ...connectionOptions,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 60000, // 1 minute
+    },
+    removeOnComplete: { count: 30 },
+    removeOnFail: { count: 50 },
+  },
+});
+
 // Export all queues
 export const queues = {
   gmailSync: gmailSyncQueue,
@@ -151,4 +166,5 @@ export const queues = {
   ipEnrichment: ipEnrichmentQueue,
   dataExport: dataExportQueue,
   cleanup: cleanupQueue,
+  billing: billingQueue,
 };

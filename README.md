@@ -50,7 +50,7 @@ A self-hosted DMARC, SPF, and DKIM report analyzer with an intuitive web interfa
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/yourusername/dmarc-analyser.git
+git clone https://github.com/helliott20/dmarc-analyser.git
 cd dmarc-analyser
 npm install
 ```

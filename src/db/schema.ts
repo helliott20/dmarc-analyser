@@ -116,6 +116,14 @@ export const organizations = pgTable('organizations', {
   dataRetentionDays: integer('data_retention_days').default(365),
   timezone: varchar('timezone', { length: 50 }).default('UTC'),
 
+  // Billing (SaaS mode only - null for self-hosted)
+  stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+  subscriptionStatus: varchar('subscription_status', { length: 50 }).default('trialing'),
+  // Status values: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid'
+  trialEndsAt: timestamp('trial_ends_at'),
+  currentPeriodEnd: timestamp('current_period_end'),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [

@@ -1,0 +1,20 @@
+# DMARC Analyser robots.txt - https://www.robotstxt.org/
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /.well-known/
+Allow: /.well-known/openid-configuration
+
+# Specific crawlers
+User-agent: Googlebot
+Allow: /
+Allow: /.well-known/
+
+User-agent: Bingbot
+Allow: /
+Allow: /.well-known/
+
+# Sitemap location
+Sitemap: https://dmarc-analyser.com/sitemap.xml

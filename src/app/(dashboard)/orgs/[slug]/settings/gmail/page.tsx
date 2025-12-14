@@ -89,7 +89,66 @@ export default async function GmailSettingsPage({ params }: PageProps) {
         </p>
       </div>
 
-      {/* Info Card */}
+      {/* Setup Guide */}
+      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            Important: Complete Both Steps to Receive Reports
+          </CardTitle>
+          <CardDescription>
+            Follow these steps to start receiving DMARC reports
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Step 1 */}
+          <div className="flex gap-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
+              1
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold">Connect a Gmail Account</h4>
+              <p className="text-sm text-muted-foreground">
+                Connect the Gmail account where you want to receive DMARC reports. This can be a dedicated reporting address (e.g., dmarc@yourdomain.com) or any Gmail/Google Workspace account you have access to.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex gap-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
+              2
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold">Update Your DMARC DNS Record</h4>
+              <p className="text-sm text-muted-foreground">
+                Add the <code className="bg-muted px-1 rounded font-mono">rua</code> tag to your domain&apos;s DMARC DNS record, pointing to the connected Gmail address:
+              </p>
+              <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
+                <span className="text-slate-400">_dmarc.yourdomain.com TXT &quot;v=DMARC1; p=none;</span> rua=mailto:<span className="text-green-400">your-email@gmail.com</span><span className="text-slate-400">&quot;</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Replace <code className="text-primary font-mono">your-email@gmail.com</code> with the Gmail address you connect below.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex gap-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
+              3
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold">Wait for Reports to Arrive</h4>
+              <p className="text-sm text-muted-foreground">
+                Email providers (Google, Microsoft, Yahoo, etc.) send DMARC aggregate reports daily. After updating your DNS, expect your first reports within <strong>24-48 hours</strong>. We&apos;ll automatically import them as they arrive.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* How It Works */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -99,7 +158,7 @@ export default async function GmailSettingsPage({ params }: PageProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            When you connect a Gmail account, the DMARC Analyser will:
+            When you connect a Gmail account, DMARC Analyser will:
           </p>
           <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2 ml-2">
             <li>
@@ -175,32 +234,6 @@ export default async function GmailSettingsPage({ params }: PageProps) {
         orgId={organization.id}
       />
 
-      {/* DMARC Setup Guide */}
-      <Card>
-        <CardHeader>
-          <CardTitle>DMARC RUA Configuration</CardTitle>
-          <CardDescription>
-            Configure your DMARC record to send aggregate reports to your Gmail
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            To receive DMARC reports in your connected Gmail account, update your
-            domain&apos;s DMARC DNS record to include the RUA (Reporting URI for
-            Aggregate reports) tag:
-          </p>
-          <div className="p-3 bg-muted rounded-md font-mono text-sm">
-            v=DMARC1; p=none; rua=mailto:
-            <span className="text-primary">your-email@gmail.com</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Replace <code className="text-primary">your-email@gmail.com</code>{' '}
-            with the Gmail address you&apos;ve connected. Reports will typically
-            arrive daily from major email providers like Google, Microsoft, and
-            Yahoo.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

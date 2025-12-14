@@ -45,7 +45,9 @@ export default function OnboardingPage() {
       });
 
       toast.success('Welcome to DMARC Analyser!');
-      router.push('/orgs');
+
+      // Full page navigation to ensure fresh server data (sidebar, etc.)
+      window.location.href = '/orgs';
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
       toast.error('Failed to complete onboarding');
@@ -53,7 +55,8 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
-    router.push('/orgs');
+    // Full page navigation to ensure fresh server data
+    window.location.href = '/orgs';
   };
 
   if (isLoading) {

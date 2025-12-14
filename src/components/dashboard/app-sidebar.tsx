@@ -25,6 +25,7 @@ import {
   HelpCircle,
   Database,
   Sparkles,
+  CreditCard,
 } from 'lucide-react';
 
 import {
@@ -463,6 +464,19 @@ export function AppSidebar({
                         <Link href={`/orgs/${orgSlug}/settings/integrations`}>
                           <Sparkles className="h-4 w-4" />
                           <span>AI Integrations</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {canManageSettings && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(`/orgs/${orgSlug}/settings/billing`)}
+                      >
+                        <Link href={`/orgs/${orgSlug}/settings/billing`}>
+                          <CreditCard className="h-4 w-4" />
+                          <span>Billing</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
