@@ -9,7 +9,7 @@ const showLandingPage = () => {
   return !!process.env.STRIPE_SECRET_KEY; // isSaasMode
 };
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Check for session cookie (don't validate - let server components do that)
