@@ -274,6 +274,11 @@ CREATE TABLE "organizations" (
 	"accent_color" varchar(7) DEFAULT '#10B981',
 	"data_retention_days" integer DEFAULT 365,
 	"timezone" varchar(50) DEFAULT 'UTC',
+	"stripe_customer_id" varchar(255),
+	"stripe_subscription_id" varchar(255),
+	"subscription_status" varchar(50) DEFAULT 'trialing',
+	"trial_ends_at" timestamp,
+	"current_period_end" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
