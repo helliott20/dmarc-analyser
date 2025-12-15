@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Check if landing page should be shown (inline to avoid import issues in middleware)
-const showLandingPage = () => {
-  const envValue = process.env.ENABLE_LANDING_PAGE;
-  if (envValue === 'false') return false;
-  if (envValue === 'true') return true;
-  return !!process.env.STRIPE_SECRET_KEY; // isSaasMode
-};
-
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -29,7 +21,9 @@ export function proxy(req: NextRequest) {
   }
 
   // Public routes that don't require authentication
+  // These routes handle their own auth/redirect logic in server components
   const publicRoutes = [
+    '/',           // Landing page - layout handles showLandingPage() check
     '/login',
     '/api/auth',
     '/api/webhooks', // Stripe webhooks
@@ -37,29 +31,16 @@ export function proxy(req: NextRequest) {
     '/help',         // Help pages
     '/privacy',      // Legal pages
     '/terms',
+    '/pricing',
   ];
 
-  // Add marketing routes if landing page is enabled
-  if (showLandingPage()) {
-    publicRoutes.push('/pricing');
-  }
-
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  // Allow root path '/' if landing page is enabled
-  if (pathname === '/' && showLandingPage()) {
-    return NextResponse.next();
-  }
+  const isPublicRoute = publicRoutes.some((route) => {
+    if (route === '/') return pathname === '/';
+    return pathname.startsWith(route);
+  });
 
   // Redirect users with session away from login page
   if (hasSession && pathname === '/login') {
-    return NextResponse.redirect(new URL('/orgs', req.url));
-  }
-
-  // Redirect users with session from marketing pages to dashboard
-  if (hasSession && (pathname === '/' || pathname === '/pricing')) {
     return NextResponse.redirect(new URL('/orgs', req.url));
   }
 
