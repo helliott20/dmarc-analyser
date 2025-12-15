@@ -10,9 +10,10 @@ import {
   records,
   dkimResults,
   spfResults,
+  sources,
+  knownSenders,
 } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -36,11 +37,17 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  ArrowLeft,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
   CheckCircle2,
   XCircle,
   Mail,
-  Globe,
   Calendar,
   Shield,
   Server,
@@ -80,25 +87,41 @@ async function getReportWithAccess(
   return result;
 }
 
-async function getReportRecords(reportId: string) {
+async function getReportRecords(reportId: string, domainId: string) {
   const recordsData = await db
     .select()
     .from(records)
     .where(eq(records.reportId, reportId))
     .orderBy(records.count);
 
-  // Get auth results for each record
+  // Get auth results and source info for each record
   const recordsWithAuth = await Promise.all(
     recordsData.map(async (record) => {
-      const [dkimData, spfData] = await Promise.all([
+      const [dkimData, spfData, sourceData] = await Promise.all([
         db.select().from(dkimResults).where(eq(dkimResults.recordId, record.id)),
         db.select().from(spfResults).where(eq(spfResults.recordId, record.id)),
+        db
+          .select({
+            source: sources,
+            knownSender: knownSenders,
+          })
+          .from(sources)
+          .leftJoin(knownSenders, eq(sources.knownSenderId, knownSenders.id))
+          .where(
+            and(
+              eq(sources.domainId, domainId),
+              eq(sources.sourceIp, record.sourceIp)
+            )
+          )
+          .limit(1),
       ]);
 
       return {
         ...record,
         dkimResults: dkimData,
         spfResults: spfData,
+        source: sourceData[0]?.source || null,
+        knownSender: sourceData[0]?.knownSender || null,
       };
     })
   );
@@ -155,14 +178,25 @@ export default async function ReportDetailPage({ params }: PageProps) {
   if (!domain.verifiedAt) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to {domain.domain}
-            </Link>
-          </Button>
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}`}>Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}/domains/${domainId}`}>{domain.domain}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Report</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
@@ -183,7 +217,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
     );
   }
 
-  const recordsData = await getReportRecords(reportId);
+  const recordsData = await getReportRecords(reportId, domainId);
 
   // Calculate stats
   const totalMessages = recordsData.reduce((sum, r) => sum + r.count, 0);
@@ -197,15 +231,32 @@ export default async function ReportDetailPage({ params }: PageProps) {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Reports
-            </Link>
-          </Button>
-        </div>
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}`}>Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}/domains/${domainId}`}>{domain.domain}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}/domains/${domainId}/reports`}>Reports</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{report.orgName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
         <div className="flex items-start justify-between">
           <div>
@@ -320,13 +371,43 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 {recordsData.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell>
-                      <div>
-                        <code className="text-sm">{record.sourceIp}</code>
-                        {record.headerFrom && (
-                          <p className="text-xs text-muted-foreground">
-                            From: {record.headerFrom}
-                          </p>
+                      <div className="flex items-center gap-2">
+                        {record.knownSender?.logoUrl && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <img
+                                src={record.knownSender.logoUrl}
+                                alt={record.knownSender.name}
+                                className="h-5 w-5 rounded object-contain flex-shrink-0"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{record.knownSender.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
+                        <div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={`/orgs/${slug}/domains/${domainId}/sources`}
+                                className="hover:underline"
+                              >
+                                <code className="text-sm font-medium hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+                                  {record.sourceIp}
+                                </code>
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{record.knownSender?.name || record.source?.organization || 'Unknown source'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          {record.headerFrom && (
+                            <p className="text-xs text-muted-foreground">
+                              From: {record.headerFrom}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">

@@ -52,6 +52,9 @@ export default function BillingSettingsPage() {
     }
   }, [searchParams]);
 
+  // Get redirect reason (e.g., trial_expired)
+  const redirectReason = searchParams.get('reason');
+
   useEffect(() => {
     fetchBillingInfo();
   }, [slug]);
@@ -151,7 +154,7 @@ export default function BillingSettingsPage() {
               Self-Hosted Mode
             </CardTitle>
             <CardDescription>
-              You're running a self-hosted instance with all features unlocked
+              You&apos;re running a self-hosted instance with all features unlocked
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -178,6 +181,27 @@ export default function BillingSettingsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Access Blocked Alert */}
+      {redirectReason && (
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+            <div>
+              <p className="font-medium text-red-800 dark:text-red-200">
+                {redirectReason === 'trial_expired' && 'Your trial has expired'}
+                {redirectReason === 'subscription_canceled' && 'Your subscription has been cancelled'}
+                {redirectReason === 'payment_failed' && 'Your payment has failed'}
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {redirectReason === 'trial_expired' && 'Subscribe now to continue using DMARC Analyser and keep your data.'}
+                {redirectReason === 'subscription_canceled' && 'Resubscribe to regain access to your organisation.'}
+                {redirectReason === 'payment_failed' && 'Please update your payment method to continue.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
         <p className="text-muted-foreground">

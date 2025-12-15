@@ -51,7 +51,10 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  // Pass pathname to server components via header
+  const response = NextResponse.next();
+  response.headers.set('x-pathname', pathname);
+  return response;
 }
 
 export const config = {

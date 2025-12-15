@@ -207,6 +207,7 @@ export async function autoMatchDomainSources(
         .update(sources)
         .set({
           knownSenderId: match.id,
+          sourceType: 'legitimate',
           updatedAt: new Date(),
         })
         .where(eq(sources.id, source.id));

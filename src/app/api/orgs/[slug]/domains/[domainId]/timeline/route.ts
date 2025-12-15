@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { organizations, orgMembers, domains, reports, records } from '@/db/schema';
-import { eq, and, gte, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, inArray } from 'drizzle-orm';
 
 interface RouteParams {
   params: Promise<{ slug: string; domainId: string }>;
@@ -54,9 +54,21 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Get URL params for time range
     const url = new URL(request.url);
     const days = parseInt(url.searchParams.get('days') || '30', 10);
+    const startDateParam = url.searchParams.get('startDate');
+    const endDateParam = url.searchParams.get('endDate');
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    let startDate: Date;
+    let endDate: Date = new Date();
+
+    if (startDateParam && endDateParam) {
+      // Custom date range
+      startDate = new Date(startDateParam);
+      endDate = new Date(endDateParam);
+    } else {
+      // Preset range (days ago)
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+    }
 
     // Get all reports in the time range
     const reportsInRange = await db
@@ -69,7 +81,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       .where(
         and(
           eq(reports.domainId, domainId),
-          gte(reports.dateRangeBegin, startDate)
+          gte(reports.dateRangeBegin, startDate),
+          lte(reports.dateRangeBegin, endDate)
         )
       );
 

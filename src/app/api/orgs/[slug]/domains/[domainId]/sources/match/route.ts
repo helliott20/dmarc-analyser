@@ -96,6 +96,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           .update(sources)
           .set({
             knownSenderId: match.id,
+            sourceType: 'legitimate',
             updatedAt: new Date(),
           })
           .where(eq(sources.id, sourceId));

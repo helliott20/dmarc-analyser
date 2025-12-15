@@ -10,7 +10,6 @@ import {
   knownSenders,
 } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -18,31 +17,29 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
   AlertTriangle,
-  Server,
-  MapPin,
-  Shield,
 } from 'lucide-react';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { SourcesEnrichment } from '@/components/domains/sources-enrichment';
 import { AutoMatchButton } from '@/components/sources/auto-match-button';
+import { SourcesFilterBar, type SourceFilter } from '@/components/sources/sources-filter-bar';
 import { ExportButton } from '@/components/export-button';
 import { SourcesWorldMap } from '@/components/maps/sources-world-map';
+import { SourcesTable } from '@/components/sources/sources-table';
+
+const FAIL_THRESHOLD = 0.5; // 50% pass rate threshold for "failing" filter
 
 interface PageProps {
   params: Promise<{ slug: string; domainId: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }
 
 async function getDomainWithAccess(
@@ -82,40 +79,11 @@ async function getDomainSources(domainId: string) {
     .orderBy(desc(sources.totalMessages));
 }
 
-function getSourceTypeBadge(type: string) {
-  switch (type) {
-    case 'legitimate':
-      return (
-        <Badge variant="secondary" className="bg-green-100 text-green-700">
-          <CheckCircle2 className="h-3 w-3 mr-1" />
-          Legitimate
-        </Badge>
-      );
-    case 'suspicious':
-      return (
-        <Badge variant="secondary" className="bg-red-100 text-red-700">
-          <XCircle className="h-3 w-3 mr-1" />
-          Suspicious
-        </Badge>
-      );
-    case 'forwarded':
-      return (
-        <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-          Forwarded
-        </Badge>
-      );
-    default:
-      return (
-        <Badge variant="outline">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Unknown
-        </Badge>
-      );
-  }
-}
 
-export default async function SourcesPage({ params }: PageProps) {
+export default async function SourcesPage({ params, searchParams }: PageProps) {
   const { slug, domainId } = await params;
+  const { filter } = await searchParams;
+  const currentFilter = (filter as SourceFilter) || 'all';
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -134,14 +102,25 @@ export default async function SourcesPage({ params }: PageProps) {
   if (!domain.verifiedAt) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/orgs/${slug}/domains/${domainId}`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to {domain.domain}
-            </Link>
-          </Button>
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}`}>Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href={`/orgs/${slug}/domains/${domainId}`}>{domain.domain}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Sources</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
@@ -164,7 +143,14 @@ export default async function SourcesPage({ params }: PageProps) {
 
   const sourcesData = await getDomainSources(domainId);
 
-  // Calculate stats
+  // Helper to check if source is failing
+  const isSourceFailing = (source: typeof sourcesData[0]['source']) => {
+    const total = Number(source.totalMessages);
+    const passed = Number(source.passedMessages);
+    return total > 0 && passed / total < FAIL_THRESHOLD;
+  };
+
+  // Calculate stats and filter counts
   const totalSources = sourcesData.length;
   const legitimateSources = sourcesData.filter(
     (s) => s.source.sourceType === 'legitimate'
@@ -175,6 +161,12 @@ export default async function SourcesPage({ params }: PageProps) {
   const suspiciousSources = sourcesData.filter(
     (s) => s.source.sourceType === 'suspicious'
   ).length;
+  const forwardedSources = sourcesData.filter(
+    (s) => s.source.sourceType === 'forwarded'
+  ).length;
+  const failingSources = sourcesData.filter(
+    (s) => isSourceFailing(s.source)
+  ).length;
   const unenrichedSources = sourcesData.filter(
     (s) => !s.source.country && !s.source.organization
   ).length;
@@ -182,17 +174,45 @@ export default async function SourcesPage({ params }: PageProps) {
     (s) => s.knownSender !== null
   ).length;
 
+  // Filter counts for the filter bar
+  const filterCounts = {
+    all: totalSources,
+    legitimate: legitimateSources,
+    suspicious: suspiciousSources,
+    unknown: unknownSources,
+    forwarded: forwardedSources,
+    failing: failingSources,
+  };
+
+  // Apply filter
+  const filteredSources = currentFilter === 'all'
+    ? sourcesData
+    : currentFilter === 'failing'
+      ? sourcesData.filter((s) => isSourceFailing(s.source))
+      : sourcesData.filter((s) => s.source.sourceType === currentFilter);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={`/orgs/${slug}/domains/${domainId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {domain.domain}
-          </Link>
-        </Button>
-      </div>
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/orgs/${slug}`}>Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}`}>{domain.domain}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Sources</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex items-center justify-between">
         <div>
@@ -260,19 +280,29 @@ export default async function SourcesPage({ params }: PageProps) {
       {/* Geographic Map */}
       <SourcesWorldMap orgSlug={slug} domainId={domainId} />
 
+      {/* Filter Bar */}
+      <SourcesFilterBar counts={filterCounts} />
+
       {/* Sources Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>All Sources</CardTitle>
+              <CardTitle>
+                {currentFilter === 'all' ? 'All Sources' : `${currentFilter.charAt(0).toUpperCase() + currentFilter.slice(1)} Sources`}
+              </CardTitle>
               <CardDescription>
-                {matchedSources > 0 && (
+                {currentFilter !== 'all' && (
+                  <span>
+                    Showing {filteredSources.length} of {totalSources} sources
+                  </span>
+                )}
+                {currentFilter === 'all' && matchedSources > 0 && (
                   <span className="text-green-600">
                     {matchedSources} of {totalSources} matched to known senders
                   </span>
                 )}
-                {matchedSources === 0 && totalSources > 0 && (
+                {currentFilter === 'all' && matchedSources === 0 && totalSources > 0 && (
                   <span>Sources that send email for this domain</span>
                 )}
               </CardDescription>
@@ -280,131 +310,40 @@ export default async function SourcesPage({ params }: PageProps) {
           </div>
         </CardHeader>
         <CardContent>
-          {sourcesData.length === 0 ? (
-            <div className="text-center py-12">
-              <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No sources yet</h3>
-              <p className="text-muted-foreground">
-                Sources will appear here once DMARC reports are imported.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Source IP</TableHead>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>Known Sender</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Passed</TableHead>
-                  <TableHead className="text-right">Failed</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Seen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sourcesData.map(({ source, knownSender }) => {
-                  const passRate =
-                    Number(source.totalMessages) > 0
-                      ? (Number(source.passedMessages) /
-                          Number(source.totalMessages)) *
-                        100
-                      : 0;
-
-                  return (
-                    <TableRow key={source.id}>
-                      <TableCell>
-                        <div>
-                          <code className="text-sm font-medium">
-                            {source.sourceIp}
-                          </code>
-                          {source.hostname && (
-                            <p className="text-xs text-muted-foreground">
-                              {source.hostname}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {source.organization || 'Unknown'}
-                          </p>
-                          {source.asn && (
-                            <p className="text-xs text-muted-foreground">
-                              {source.asn}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {knownSender ? (
-                          <div className="flex items-center gap-2">
-                            {knownSender.logoUrl && (
-                              <img
-                                src={knownSender.logoUrl}
-                                alt={knownSender.name}
-                                className="h-4 w-4 rounded object-contain"
-                              />
-                            )}
-                            <div>
-                              <p className="font-medium text-sm">
-                                {knownSender.name}
-                              </p>
-                              {knownSender.isGlobal && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs h-4 px-1"
-                                >
-                                  <Shield className="h-2 w-2 mr-1" />
-                                  Global
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {source.country ? (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-muted-foreground" />
-                            <span>
-                              {source.city && `${source.city}, `}
-                              {source.country}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Unknown</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {Number(source.totalMessages).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {Number(source.passedMessages).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right text-red-600">
-                        {Number(source.failedMessages).toLocaleString()}
-                      </TableCell>
-                      <TableCell>{getSourceTypeBadge(source.sourceType)}</TableCell>
-                      <TableCell>
-                        {source.lastSeen ? (
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(source.lastSeen).toLocaleDateString()}
-                          </span>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+          <SourcesTable
+            sources={filteredSources.map(({ source, knownSender }) => ({
+              source: {
+                id: source.id,
+                sourceIp: source.sourceIp,
+                hostname: source.hostname,
+                organization: source.organization,
+                country: source.country,
+                city: source.city,
+                asn: source.asn,
+                sourceType: source.sourceType,
+                totalMessages: Number(source.totalMessages),
+                passedMessages: Number(source.passedMessages),
+                failedMessages: Number(source.failedMessages),
+                lastSeen: source.lastSeen?.toISOString() || null,
+              },
+              knownSender: knownSender
+                ? {
+                    id: knownSender.id,
+                    name: knownSender.name,
+                    logoUrl: knownSender.logoUrl,
+                    isGlobal: knownSender.isGlobal,
+                  }
+                : null,
+            }))}
+            orgSlug={slug}
+            domainId={domainId}
+            emptyMessage={sourcesData.length === 0 ? 'No sources yet' : 'No matching sources'}
+            emptyDescription={
+              sourcesData.length === 0
+                ? 'Sources will appear here once DMARC reports are imported.'
+                : 'Try changing your filter to see more sources.'
+            }
+          />
         </CardContent>
       </Card>
     </div>

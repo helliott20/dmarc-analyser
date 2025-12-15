@@ -28,6 +28,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
   Mail,
   ExternalLink,
   CheckCircle2,
@@ -174,15 +182,26 @@ export default async function ReportsPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href={`/orgs/${slug}/domains/${domainId}`}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {domain.domain}
-          </Link>
-        </Button>
-      </div>
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/orgs/${slug}`}>Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/orgs/${slug}/domains/${domainId}`}>{domain.domain}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Reports</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <div className="flex items-center justify-between">
         <div>
