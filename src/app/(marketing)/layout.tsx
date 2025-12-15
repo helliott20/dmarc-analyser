@@ -15,14 +15,25 @@ export default async function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Debug logging - remove after fixing
+  const landingPageEnabled = showLandingPage();
+  console.log('[MARKETING LAYOUT]', {
+    showLandingPage: landingPageEnabled,
+    ENABLE_LANDING_PAGE: process.env.ENABLE_LANDING_PAGE,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? '[SET]' : '[UNSET]'
+  });
+
   // Redirect to dashboard if landing page is disabled (self-hosted mode)
-  if (!showLandingPage()) {
+  if (!landingPageEnabled) {
+    console.log('[MARKETING LAYOUT] Redirecting to /orgs - landing page disabled');
     redirect('/orgs');
   }
 
   // If user is already logged in, redirect to dashboard
   const session = await auth();
+  console.log('[MARKETING LAYOUT] Session check:', { hasUser: !!session?.user });
   if (session?.user) {
+    console.log('[MARKETING LAYOUT] Redirecting to /orgs - user logged in');
     redirect('/orgs');
   }
 

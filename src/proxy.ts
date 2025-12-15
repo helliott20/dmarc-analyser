@@ -10,6 +10,9 @@ export function proxy(req: NextRequest) {
                         req.cookies.get('__Secure-authjs.session-token');
   const hasSession = !!sessionCookie;
 
+  // Debug logging - remove after fixing
+  console.log('[PROXY]', { pathname, hasSession, cookies: req.cookies.getAll().map(c => c.name) });
+
   // Static assets, ACME challenges should always pass through
   if (
     pathname.startsWith('/_next') ||
@@ -41,16 +44,19 @@ export function proxy(req: NextRequest) {
 
   // Redirect users with session away from login page
   if (hasSession && pathname === '/login') {
+    console.log('[PROXY] Redirecting logged-in user from /login to /orgs');
     return NextResponse.redirect(new URL('/orgs', req.url));
   }
 
   // Redirect users without session to login page for protected routes
   if (!hasSession && !isPublicRoute) {
+    console.log('[PROXY] Redirecting to login - not public route:', pathname);
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
+  console.log('[PROXY] Allowing through:', pathname, { isPublicRoute });
   return NextResponse.next();
 }
 
