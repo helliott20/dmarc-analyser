@@ -59,6 +59,9 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  // Debug logging - remove after fixing
+  console.log('[MARKETING PAGE] Rendering home page');
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
