@@ -10,17 +10,6 @@
 export const isSaasMode = () => !!process.env.STRIPE_SECRET_KEY;
 
 /**
- * Check if the landing page should be shown
- * Auto-enabled in SaaS mode, can be overridden via ENABLE_LANDING_PAGE
- */
-export const showLandingPage = () => {
-  const envValue = process.env.ENABLE_LANDING_PAGE;
-  if (envValue === 'false') return false;
-  if (envValue === 'true') return true;
-  return isSaasMode();
-};
-
-/**
  * Pricing configuration
  */
 export const PRICING = {

@@ -62,7 +62,7 @@ export default function HelpPage() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
+              <Link href="/login">Login</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbPage>Help</BreadcrumbPage>

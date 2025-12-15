@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { showLandingPage, isSaasMode } from '@/lib/config';
+import { isSaasMode } from '@/lib/config';
 
 /**
  * GET /api/debug/config
@@ -7,9 +7,7 @@ import { showLandingPage, isSaasMode } from '@/lib/config';
  */
 export async function GET() {
   return NextResponse.json({
-    ENABLE_LANDING_PAGE: process.env.ENABLE_LANDING_PAGE,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? '[SET]' : '[EMPTY/UNSET]',
     isSaasMode: isSaasMode(),
-    showLandingPage: showLandingPage(),
   });
 }

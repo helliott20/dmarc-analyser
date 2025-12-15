@@ -1,20 +1,14 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://dmarc-analyser.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.dmarcanalyser.io';
 
   return [
     {
-      url: baseUrl,
+      url: `${baseUrl}/login`,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
+      changeFrequency: 'never',
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/privacy`,
@@ -27,12 +21,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'never',
-      priority: 0.8,
     },
   ];
 }
