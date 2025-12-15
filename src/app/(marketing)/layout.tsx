@@ -16,6 +16,8 @@ export default async function MarketingLayout({
   children: React.ReactNode;
 }) {
   // Debug logging - remove after fixing
+  console.log('[MARKETING LAYOUT] START - this should always appear');
+
   const landingPageEnabled = showLandingPage();
   console.log('[MARKETING LAYOUT]', {
     showLandingPage: landingPageEnabled,
@@ -23,11 +25,12 @@ export default async function MarketingLayout({
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? '[SET]' : '[UNSET]'
   });
 
+  // TEMPORARILY DISABLED - testing if layout even runs
   // Redirect to dashboard if landing page is disabled (self-hosted mode)
-  if (!landingPageEnabled) {
-    console.log('[MARKETING LAYOUT] Redirecting to /orgs - landing page disabled');
-    redirect('/orgs');
-  }
+  // if (!landingPageEnabled) {
+  //   console.log('[MARKETING LAYOUT] Redirecting to /orgs - landing page disabled');
+  //   redirect('/orgs');
+  // }
 
   // If user is already logged in, redirect to dashboard
   const session = await auth();
