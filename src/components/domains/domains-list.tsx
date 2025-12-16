@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -211,11 +219,44 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
 }
 
 export function DomainsList({ domains, orgSlug, showVolumeBar = false }: DomainsListProps) {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Initialize state from URL params for back navigation preservation
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [page, setPage] = useState(() => {
+    const pageParam = searchParams.get('page');
+    return pageParam ? Math.max(1, parseInt(pageParam, 10)) : 1;
+  });
   const [domainStats, setDomainStats] = useState<Map<string, DomainWithStats>>(new Map());
   const [statsLoading, setStatsLoading] = useState(false);
   const [copiedDomainId, setCopiedDomainId] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(searchParams.get('tag'));
+
+  // Update URL when filters change (for back navigation preservation)
+  const updateUrl = useCallback((newPage: number, newTag: string | null, newSearch: string) => {
+    const params = new URLSearchParams();
+    if (newPage > 1) params.set('page', newPage.toString());
+    if (newTag) params.set('tag', newTag);
+    if (newSearch.trim()) params.set('q', newSearch.trim());
+
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(newUrl, { scroll: false });
+  }, [pathname, router]);
+
+  // Collect unique tags from all domains
+  const allTags = useMemo(() => {
+    const tagMap = new Map<string, DomainTag>();
+    domainStats.forEach((stats) => {
+      stats.tags?.forEach((tag) => {
+        if (!tagMap.has(tag.id)) {
+          tagMap.set(tag.id, tag);
+        }
+      });
+    });
+    return Array.from(tagMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [domainStats]);
 
   // Copy external destination verification record to clipboard
   const copyVerificationRecord = async (e: React.MouseEvent, domainId: string, domainName: string) => {
@@ -270,6 +311,14 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
       );
     }
 
+    // Filter by selected tag
+    if (selectedTag) {
+      result = result.filter((d) => {
+        const stats = domainStats.get(d.id);
+        return stats?.tags?.some((tag) => tag.id === selectedTag);
+      });
+    }
+
     // Sort by volume (descending) when stats are loaded, otherwise alphabetically
     if (showVolumeBar && domainStats.size > 0) {
       result = [...result].sort((a, b) => {
@@ -282,18 +331,43 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
     }
 
     return result;
-  }, [domains, search, showVolumeBar, domainStats]);
+  }, [domains, search, showVolumeBar, domainStats, selectedTag]);
 
   const totalPages = Math.ceil(filteredDomains.length / PAGE_SIZE);
+
+  // Reset page if it exceeds total pages (e.g., after filtering reduces results)
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(1);
+      updateUrl(1, selectedTag, search);
+    }
+  }, [totalPages, page, selectedTag, search, updateUrl]);
+
   const paginatedDomains = filteredDomains.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
 
-  // Reset page when search changes
+  // Reset page when search changes and update URL
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(1);
+    updateUrl(1, selectedTag, value);
+  };
+
+  // Handle tag filter selection and update URL
+  const handleTagSelect = (tagId: string | null) => {
+    setSelectedTag(tagId);
+    setPage(1);
+    updateUrl(1, tagId, search);
+  };
+
+  // Handle page change and update URL
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    updateUrl(newPage, selectedTag, search);
+    // Scroll to top of list when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Build grid class based on whether volume bar is shown
@@ -301,19 +375,69 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
     ? cn('grid items-center gap-4', GRID_COLUMNS.base, GRID_COLUMNS.md, GRID_COLUMNS.lg)
     : cn('grid items-center gap-4', GRID_COLUMNS.base, GRID_COLUMNS.md);
 
+  // Get selected tag name for display
+  const selectedTagName = selectedTag
+    ? allTags.find((t) => t.id === selectedTag)?.name
+    : null;
+
   return (
     <div className="space-y-4">
-      {/* Search */}
-      {domains.length > 10 && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <Input
-            placeholder="Search domains..."
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
-            aria-label="Search domains"
-          />
+      {/* Search and Tag Filter */}
+      {(domains.length > 10 || allTags.length > 0) && (
+        <div className="flex items-center gap-3">
+          {domains.length > 10 && (
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Input
+                placeholder="Search domains..."
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9"
+                aria-label="Search domains"
+              />
+            </div>
+          )}
+
+          {/* Tag Filter Dropdown */}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Tag:</label>
+              <Select
+                value={selectedTag || 'all'}
+                onValueChange={(value) => handleTagSelect(value === 'all' ? null : value)}
+              >
+                <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter by tag">
+                  {selectedTagName ? (
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: allTags.find((t) => t.id === selectedTag)?.color }}
+                      />
+                      {selectedTagName}
+                    </span>
+                  ) : (
+                    'All tags'
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tags</SelectItem>
+                {allTags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      {tag.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       )}
 
@@ -480,7 +604,7 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, page - 1))}
               disabled={page === 1}
               aria-label="Previous page"
             >
@@ -492,7 +616,7 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
               aria-label="Next page"
             >
