@@ -22,6 +22,8 @@ import {
   ShieldX,
   ShieldAlert,
   Loader2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { VolumeBar } from '@/components/domains/volume-bar';
 import { cn } from '@/lib/utils';
@@ -213,6 +215,21 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
   const [page, setPage] = useState(1);
   const [domainStats, setDomainStats] = useState<Map<string, DomainWithStats>>(new Map());
   const [statsLoading, setStatsLoading] = useState(false);
+  const [copiedDomainId, setCopiedDomainId] = useState<string | null>(null);
+
+  // Copy external destination verification record to clipboard
+  const copyVerificationRecord = async (e: React.MouseEvent, domainId: string, domainName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const record = `${domainName}.report._dmarc`;
+    try {
+      await navigator.clipboard.writeText(record);
+      setCopiedDomainId(domainId);
+      setTimeout(() => setCopiedDomainId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Fetch domain stats if showVolumeBar is enabled
   useEffect(() => {
@@ -356,11 +373,47 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
                       </div>
                     )}
                   </div>
-                  {domain.displayName && domain.displayName !== domain.domain && (
-                    <p className="text-sm text-muted-foreground truncate">
-                      {domain.displayName}
-                    </p>
-                  )}
+                  {/* Second line: Display name or EDV record */}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {domain.displayName && domain.displayName !== domain.domain && (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {domain.displayName}
+                      </p>
+                    )}
+                    {/* Copy external destination verification record */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => copyVerificationRecord(e, domain.id, domain.domain)}
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
+                              copiedDomainId === domain.id
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            )}
+                            aria-label="Copy external reporting record"
+                          >
+                            {copiedDomainId === domain.id ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                EDV Record
+                              </>
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-medium">External Destination Verification</p>
+                          <p className="text-xs text-muted-foreground">{domain.domain}.report._dmarc</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
               </div>
 
