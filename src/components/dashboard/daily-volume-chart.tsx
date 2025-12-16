@@ -252,7 +252,7 @@ export function DailyVolumeChart({ orgSlug }: DailyVolumeChartProps) {
                 }
                 width={45}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
+              <Tooltip content={<CustomTooltip />} cursor={false} />
               <Legend
                 wrapperStyle={{ paddingTop: '10px' }}
                 formatter={(value) => (
