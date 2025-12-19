@@ -23,6 +23,7 @@ import { Globe, Plus } from 'lucide-react';
 import { CsvImportDialog } from '@/components/domains/csv-import-dialog';
 import { DomainsList } from '@/components/domains/domains-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CENTRAL_INBOX_EMAIL } from '@/lib/constants';
 import { DiscoverDomainsCard } from '@/components/gmail/discover-domains-card';
 
 interface Domain {
@@ -201,7 +202,7 @@ export default function DomainsPage() {
               </div>
             </div>
           ) : (
-            <DomainsList domains={domains} orgSlug={orgSlug} showVolumeBar />
+            <DomainsList domains={domains} orgSlug={orgSlug} showVolumeBar ruaEmail={CENTRAL_INBOX_EMAIL} />
           )}
         </CardContent>
       </Card>

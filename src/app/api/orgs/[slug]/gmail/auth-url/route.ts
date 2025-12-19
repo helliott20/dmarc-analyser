@@ -3,7 +3,8 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { organizations, orgMembers } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { getGmailAuthUrl } from '@/lib/gmail';
+import { getGmailAuthUrl, getOrgOAuthCredentials, OAuthCredentials } from '@/lib/gmail';
+import { isCentralInboxEnabled } from '@/lib/central-inbox';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -35,10 +36,53 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    const { organization } = membership;
+    const centralInboxEnabled = isCentralInboxEnabled();
+    const hasSystemOauth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+    let credentials: OAuthCredentials | null = null;
+
+    // Determine which OAuth credentials to use
+    if (centralInboxEnabled) {
+      // Hosted version: Require BYOC
+      if (!organization.useCustomOauth) {
+        return NextResponse.json(
+          { error: 'Custom OAuth is not enabled. Enable BYOC mode in Email Import settings first.' },
+          { status: 400 }
+        );
+      }
+      credentials = await getOrgOAuthCredentials(organization.id);
+      if (!credentials) {
+        return NextResponse.json(
+          { error: 'No OAuth credentials configured. Add your Google Cloud credentials first.' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Self-hosted version: Use system OAuth or BYOC
+      if (hasSystemOauth) {
+        // Use system-level OAuth from env vars
+        credentials = {
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        };
+      } else if (organization.useCustomOauth) {
+        // Fall back to BYOC if no system OAuth
+        credentials = await getOrgOAuthCredentials(organization.id);
+      }
+
+      if (!credentials) {
+        return NextResponse.json(
+          { error: 'Gmail OAuth is not configured. Contact your administrator.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create state with org info (encrypted in production)
     const state = Buffer.from(
       JSON.stringify({
-        orgId: membership.organization.id,
+        orgId: organization.id,
         orgSlug: slug,
         userId: session.user.id,
       })
@@ -46,7 +90,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Use a single global callback URL for Gmail OAuth
     const redirectUri = `${process.env.NEXTAUTH_URL}/api/gmail/callback`;
-    const url = getGmailAuthUrl(state, redirectUri);
+    const url = getGmailAuthUrl(state, redirectUri, credentials);
 
     return NextResponse.json({ url });
   } catch (error) {

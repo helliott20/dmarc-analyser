@@ -279,6 +279,9 @@ CREATE TABLE "organizations" (
 	"subscription_status" varchar(50) DEFAULT 'trialing',
 	"trial_ends_at" timestamp,
 	"current_period_end" timestamp,
+	"google_client_id" text,
+	"google_client_secret" text,
+	"use_custom_oauth" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")

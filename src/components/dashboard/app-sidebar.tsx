@@ -350,7 +350,7 @@ export function AppSidebar({
                       >
                         <Link href={`/orgs/${orgSlug}/settings/gmail`}>
                           <Mail className="h-4 w-4" />
-                          <span>Gmail</span>
+                          <span>Email Import</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -28,6 +28,7 @@ interface WorkerInstance {
 async function main() {
   // Dynamic imports to ensure env is loaded first
   const { createGmailSyncWorker } = await import('./gmail-sync.worker');
+  const { createCentralInboxWorker } = await import('./central-inbox.worker');
   const { createScheduledReportsWorker } = await import('./scheduled-reports.worker');
   const { createAlertsWorker } = await import('./alerts.worker');
   const { createWebhookDeliveryWorker } = await import('./webhook-delivery.worker');
@@ -57,6 +58,7 @@ async function main() {
 
   // Create all workers
   workers.push(createGmailSyncWorker());
+  workers.push(createCentralInboxWorker());
   workers.push(createScheduledReportsWorker());
   workers.push(createAlertsWorker());
   workers.push(createWebhookDeliveryWorker());
@@ -65,7 +67,8 @@ async function main() {
   workers.push(createDnsCheckWorker());
 
   console.log(`[Workers] Started ${workers.length} workers:`);
-  console.log('  - Gmail Sync (every 15 min)');
+  console.log('  - Gmail Sync (BYOC, every 15 min)');
+  console.log('  - Central Inbox (every 15 min)');
   console.log('  - Scheduled Reports (checks every hour)');
   console.log('  - Alerts (on report import)');
   console.log('  - Webhook Delivery (with retry)');

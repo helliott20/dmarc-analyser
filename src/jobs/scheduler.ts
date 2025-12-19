@@ -3,6 +3,7 @@ import { gmailAccounts, domains, scheduledReports } from '@/db/schema';
 import { eq, and, lte, isNotNull } from 'drizzle-orm';
 import {
   gmailSyncQueue,
+  centralInboxQueue,
   dnsCheckQueue,
   scheduledReportsQueue,
   cleanupQueue,
@@ -10,6 +11,7 @@ import {
 } from './queues';
 import type {
   GmailSyncJobData,
+  CentralInboxJobData,
   DnsCheckJobData,
   ScheduledReportJobData,
   CleanupJobData,
@@ -194,7 +196,7 @@ export async function scheduleCleanupJobs() {
 export async function setupRepeatableJobs() {
   console.log('[Scheduler] Setting up repeatable jobs...');
 
-  // Gmail sync - every 15 minutes
+  // Gmail sync - every 15 minutes (BYOC mode only)
   // Note: Don't use jobId with repeat - BullMQ creates its own keys for repeatable jobs
   await gmailSyncQueue.add(
     'gmail-sync-scheduler',
@@ -205,7 +207,19 @@ export async function setupRepeatableJobs() {
       },
     }
   );
-  console.log('[Scheduler] Added Gmail sync (every 15 min)');
+  console.log('[Scheduler] Added Gmail sync (every 15 min, BYOC mode)');
+
+  // Central inbox sync - every 15 minutes
+  await centralInboxQueue.add(
+    'central-inbox-scheduler',
+    { type: 'scheduled' } as CentralInboxJobData,
+    {
+      repeat: {
+        pattern: '*/15 * * * *', // Every 15 minutes
+      },
+    }
+  );
+  console.log('[Scheduler] Added Central inbox sync (every 15 min)');
 
   // DNS check - every 6 hours
   await dnsCheckQueue.add(
@@ -279,6 +293,7 @@ export async function setupRepeatableJobs() {
 export async function removeRepeatableJobs() {
   const queuesWithRepeat = [
     gmailSyncQueue,
+    centralInboxQueue,
     dnsCheckQueue,
     scheduledReportsQueue,
     cleanupQueue,

@@ -4,6 +4,7 @@ import { connectionOptions } from '../redis';
 // Queue names
 export const QUEUE_NAMES = {
   GMAIL_SYNC: 'gmail-sync',
+  CENTRAL_INBOX: 'central-inbox',
   REPORT_PARSER: 'report-parser',
   SOURCE_AGGREGATOR: 'source-aggregator',
   ALERTS: 'alerts',
@@ -16,8 +17,22 @@ export const QUEUE_NAMES = {
   BILLING: 'billing',
 } as const;
 
-// Gmail sync queue - fetch DMARC emails
+// Gmail sync queue - fetch DMARC emails (BYOC mode)
 export const gmailSyncQueue = new Queue(QUEUE_NAMES.GMAIL_SYNC, {
+  ...connectionOptions,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000,
+    },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 500 },
+  },
+});
+
+// Central inbox queue - fetch from central reports@dmarcanalyser.io mailbox
+export const centralInboxQueue = new Queue(QUEUE_NAMES.CENTRAL_INBOX, {
   ...connectionOptions,
   defaultJobOptions: {
     attempts: 3,
@@ -157,6 +172,7 @@ export const billingQueue = new Queue(QUEUE_NAMES.BILLING, {
 // Export all queues
 export const queues = {
   gmailSync: gmailSyncQueue,
+  centralInbox: centralInboxQueue,
   reportParser: reportParserQueue,
   sourceAggregator: sourceAggregatorQueue,
   alerts: alertsQueue,

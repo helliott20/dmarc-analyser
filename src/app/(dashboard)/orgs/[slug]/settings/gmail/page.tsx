@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
-import { organizations, orgMembers, gmailAccounts } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { organizations, orgMembers, gmailAccounts, domains, reports } from '@/db/schema';
+import { eq, and, gte, desc, sql } from 'drizzle-orm';
 import {
   Card,
   CardContent,
@@ -10,10 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Mail, AlertTriangle } from 'lucide-react';
+import { Mail, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { GmailConnectButton } from '@/components/gmail/gmail-connect-button';
 import { GmailAccountsList } from '@/components/gmail/gmail-accounts-list';
 import { EmailSendingCard } from '@/components/gmail/email-sending-card';
+import { ByocSettings } from '@/components/gmail/byoc-settings';
+import { CENTRAL_INBOX_EMAIL, isCentralInboxEnabled } from '@/lib/central-inbox';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -62,7 +64,32 @@ async function getGmailAccounts(orgId: string) {
     .orderBy(gmailAccounts.email);
 }
 
-export default async function GmailSettingsPage({ params }: PageProps) {
+async function getRecentReportStats(orgId: string) {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Get count of reports imported in last 7 days for this org's domains
+  const [stats] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+      latestImport: sql<Date | null>`max(${reports.importedAt})`,
+    })
+    .from(reports)
+    .innerJoin(domains, eq(reports.domainId, domains.id))
+    .where(
+      and(
+        eq(domains.organizationId, orgId),
+        gte(reports.importedAt, sevenDaysAgo)
+      )
+    );
+
+  return {
+    recentReportCount: stats?.count || 0,
+    lastImportAt: stats?.latestImport || null,
+  };
+}
+
+export default async function EmailImportPage({ params }: PageProps) {
   const { slug } = await params;
   const session = await auth();
 
@@ -79,161 +106,253 @@ export default async function GmailSettingsPage({ params }: PageProps) {
   const { organization, role } = result;
   const canManage = ['owner', 'admin'].includes(role);
   const accounts = await getGmailAccounts(organization.id);
+  const reportStats = await getRecentReportStats(organization.id);
+
+  // Check if BYOC is enabled for this organization
+  const useCustomOauth = organization.useCustomOauth ?? false;
+  const hasCustomOauthConfigured = !!(organization.googleClientId && organization.googleClientSecret);
+
+  // Check if reports are being received successfully
+  const isReceivingReports = reportStats.recentReportCount > 0;
+
+  // Check if this is the hosted version (central inbox enabled) or self-hosted
+  const centralInboxEnabled = isCentralInboxEnabled();
+
+  // For self-hosted: check if system-level OAuth is configured (via env vars)
+  // This allows self-hosted users to connect Gmail without BYOC setup
+  const hasSystemOauth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+  // Determine if Gmail connection should be shown:
+  // - For hosted: Only if org has BYOC enabled and configured
+  // - For self-hosted: Always show if system OAuth is configured, or if org has BYOC
+  const canConnectGmail = centralInboxEnabled
+    ? (useCustomOauth && hasCustomOauthConfigured)
+    : (hasSystemOauth || (useCustomOauth && hasCustomOauthConfigured));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Gmail</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Email Import</h1>
         <p className="text-muted-foreground">
-          Connect Gmail accounts to automatically import DMARC reports
+          Configure how DMARC reports are received and imported
         </p>
       </div>
 
-      {/* Setup Guide */}
-      <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            Important: Complete Both Steps to Receive Reports
-          </CardTitle>
-          <CardDescription>
-            Follow these steps to start receiving DMARC reports
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Step 1 */}
-          <div className="flex gap-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
-              1
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold">Connect a Gmail Account</h4>
-              <p className="text-sm text-muted-foreground">
-                Connect the Gmail account where you want to receive DMARC reports. This can be a dedicated reporting address (e.g., dmarc@yourdomain.com) or any Gmail/Google Workspace account you have access to.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="flex gap-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
-              2
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold">Update Your DMARC DNS Record</h4>
-              <p className="text-sm text-muted-foreground">
-                Add the <code className="bg-muted px-1 rounded font-mono">rua</code> tag to your domain&apos;s DMARC DNS record, pointing to the connected Gmail address:
-              </p>
-              <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
-                <span className="text-slate-400">_dmarc.yourdomain.com TXT &quot;v=DMARC1; p=none;</span> rua=mailto:<span className="text-green-400">your-email@gmail.com</span><span className="text-slate-400">&quot;</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Replace <code className="text-primary font-mono">your-email@gmail.com</code> with the Gmail address you connect below.
-              </p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="flex gap-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold flex-shrink-0">
-              3
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold">Wait for Reports to Arrive</h4>
-              <p className="text-sm text-muted-foreground">
-                Email providers (Google, Microsoft, Yahoo, etc.) send DMARC aggregate reports daily. After updating your DNS, expect your first reports within <strong>24-48 hours</strong>. We&apos;ll automatically import them as they arrive.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* How It Works */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            How Gmail Import Works
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            When you connect a Gmail account, DMARC Analyser will:
-          </p>
-          <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2 ml-2">
-            <li>
-              Search for DMARC aggregate reports in your inbox (emails with
-              subject containing &quot;DMARC&quot; and &quot;Report&quot;)
-            </li>
-            <li>
-              Extract and parse the XML attachments (including .zip and .gz
-              compressed files)
-            </li>
-            <li>
-              Import the report data and associate it with your verified domains
-            </li>
-            <li>
-              Optionally apply a label to processed emails for easy organization
-            </li>
-          </ol>
-          <div className="flex items-start gap-2 p-3 bg-muted rounded-md">
-            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-            <p className="text-sm">
-              <strong>Privacy Note:</strong> Only emails matching DMARC report
-              patterns are accessed. We never read your regular emails.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Connected Accounts */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Connected Accounts</CardTitle>
+      {/* Central Inbox - Only for hosted version */}
+      {centralInboxEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Receive DMARC Reports
+              {isReceivingReports && (
+                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Active
+                </span>
+              )}
+            </CardTitle>
             <CardDescription>
-              Gmail accounts connected for DMARC report import
+              {isReceivingReports
+                ? `Receiving reports successfully - ${reportStats.recentReportCount} reports in the last 7 days`
+                : 'One simple step to start receiving DMARC reports'}
             </CardDescription>
-          </div>
-          {canManage && (
-            <GmailConnectButton orgSlug={slug} orgId={organization.id} />
-          )}
-        </CardHeader>
-        <CardContent>
-          {accounts.length === 0 ? (
-            <div className="text-center py-8">
-              <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                No Gmail accounts connected
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Connect a Gmail account to start importing DMARC reports
-                automatically.
-              </p>
-              {canManage && (
-                <GmailConnectButton orgSlug={slug} orgId={organization.id} />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Success state */}
+            {isReceivingReports && (
+              <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-green-800 dark:text-green-200">Setup Complete</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Reports are being received at <span className="font-mono">{CENTRAL_INBOX_EMAIL}</span>
+                    </p>
+                  </div>
+                </div>
+                {reportStats.lastImportAt && (
+                  <p className="mt-3 text-xs text-green-600 dark:text-green-400">
+                    Last report received: {new Date(reportStats.lastImportAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Setup instructions (always visible for reference) */}
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h4 className="font-semibold">{isReceivingReports ? 'Your report email address' : 'Add this email to your DMARC record'}</h4>
+                <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm">
+                  <span className="text-green-400">{CENTRAL_INBOX_EMAIL}</span>
+                </div>
+              </div>
+
+              {!isReceivingReports && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Your full DMARC record should look like this:
+                  </p>
+                  <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
+                    <div>
+                      <span className="text-slate-500">Record:</span> <span className="text-blue-400">_dmarc.yourdomain.com</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Type:</span> <span className="text-yellow-400">TXT</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Value:</span> <span className="text-slate-300">v=DMARC1; p=none; rua=mailto:</span><span className="text-green-400">{CENTRAL_INBOX_EMAIL}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Already have a DMARC record? Just add or update the <code className="bg-muted px-1 rounded">rua=mailto:{CENTRAL_INBOX_EMAIL}</code> part.
+                  </p>
+                </div>
               )}
             </div>
-          ) : (
-            <GmailAccountsList
-              initialAccounts={accounts.map((account) => ({
-                ...account,
-                syncProgress: account.syncProgress as SyncProgress | null,
-              }))}
+
+            {/* Helper tip */}
+            <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Quick tip:</strong> Visit any domain in your list and click &quot;DMARC Record&quot; to copy a ready-to-use record that preserves your existing settings.
+              </p>
+            </div>
+
+            {/* Timeline - only show if not receiving reports yet */}
+            {!isReceivingReports && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border">
+                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium">Reports arrive automatically</p>
+                  <p className="text-muted-foreground">
+                    Email providers send DMARC reports daily. Expect your first reports within 24-48 hours after updating DNS. We check for new reports every 15 minutes.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Gmail/BYOC Section */}
+      <Card className={centralInboxEnabled ? 'border-dashed' : ''}>
+        <CardHeader>
+          <CardTitle className={`flex items-center gap-2 ${centralInboxEnabled ? 'text-muted-foreground' : ''}`}>
+            {centralInboxEnabled ? (
+              <>
+                <AlertTriangle className="h-5 w-5" />
+                Advanced: Use Your Own Gmail Account
+              </>
+            ) : (
+              <>
+                <Mail className="h-5 w-5" />
+                Connect Gmail Account
+                {isReceivingReports && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Active
+                  </span>
+                )}
+              </>
+            )}
+          </CardTitle>
+          <CardDescription>
+            {centralInboxEnabled
+              ? 'For advanced users who want to connect their own Gmail account directly'
+              : 'Connect your Gmail account to automatically import DMARC reports'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* For self-hosted, show success state if reports are coming in */}
+          {!centralInboxEnabled && isReceivingReports && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-800 dark:text-green-200">Setup Complete</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    {reportStats.recentReportCount} reports received in the last 7 days
+                  </p>
+                </div>
+              </div>
+              {reportStats.lastImportAt && (
+                <p className="mt-3 text-xs text-green-600 dark:text-green-400">
+                  Last report received: {new Date(reportStats.lastImportAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* For hosted version: Show BYOC settings (custom OAuth) */}
+          {/* For self-hosted: Only show BYOC if system OAuth is not configured */}
+          {(centralInboxEnabled || !hasSystemOauth) && (
+            <ByocSettings
               orgSlug={slug}
+              orgId={organization.id}
               canManage={canManage}
+              useCustomOauth={useCustomOauth}
+              hasCredentials={hasCustomOauthConfigured}
             />
+          )}
+
+          {/* Show Gmail connection when available */}
+          {canConnectGmail && (
+            <div className="mt-6 pt-6 border-t space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">Connected Gmail Accounts</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Gmail accounts connected using your OAuth credentials
+                  </p>
+                </div>
+                {canManage && (
+                  <GmailConnectButton orgSlug={slug} orgId={organization.id} />
+                )}
+              </div>
+
+              {accounts.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No Gmail accounts connected yet</p>
+                </div>
+              ) : (
+                <GmailAccountsList
+                  initialAccounts={accounts.map((account) => ({
+                    ...account,
+                    syncProgress: account.syncProgress as SyncProgress | null,
+                  }))}
+                  orgSlug={slug}
+                  canManage={canManage}
+                />
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Email Sending */}
-      <EmailSendingCard
-        accounts={accounts.map(a => ({ id: a.id, email: a.email, sendEnabled: a.sendEnabled, notifyNewDomains: a.notifyNewDomains, notifyVerificationLapse: a.notifyVerificationLapse }))}
-        orgSlug={slug}
-        orgId={organization.id}
-      />
-
+      {/* Email Sending - Only relevant if BYOC accounts exist */}
+      {accounts.length > 0 && (
+        <EmailSendingCard
+          accounts={accounts.map(a => ({ id: a.id, email: a.email, sendEnabled: a.sendEnabled, notifyNewDomains: a.notifyNewDomains, notifyVerificationLapse: a.notifyVerificationLapse }))}
+          orgSlug={slug}
+          orgId={organization.id}
+        />
+      )}
     </div>
   );
 }

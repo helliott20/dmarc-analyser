@@ -3,7 +3,8 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db';
 import { organizations, orgMembers, gmailAccounts } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { exchangeCodeForTokens } from '@/lib/gmail';
+import { exchangeCodeForTokens, getOrgOAuthCredentials, OAuthCredentials } from '@/lib/gmail';
+import { isCentralInboxEnabled } from '@/lib/central-inbox';
 
 // Use NEXTAUTH_URL for redirects in production
 const getBaseUrl = () => process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -71,9 +72,36 @@ export async function GET(request: Request) {
       );
     }
 
-    // Exchange code for tokens
+    // Get OAuth credentials for token exchange
+    const centralInboxEnabled = isCentralInboxEnabled();
+    const hasSystemOauth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+    let credentials: OAuthCredentials | null = null;
+
+    if (centralInboxEnabled) {
+      // Hosted version: Use org's BYOC credentials
+      credentials = await getOrgOAuthCredentials(stateData.orgId);
+    } else {
+      // Self-hosted version: Use system OAuth or fall back to BYOC
+      if (hasSystemOauth) {
+        credentials = {
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        };
+      } else {
+        credentials = await getOrgOAuthCredentials(stateData.orgId);
+      }
+    }
+
+    if (!credentials) {
+      return NextResponse.redirect(
+        new URL(`/orgs/${orgSlug}/settings/gmail?error=no_credentials`, baseUrl)
+      );
+    }
+
+    // Exchange code for tokens using the org's credentials
     const redirectUri = `${process.env.NEXTAUTH_URL}/api/gmail/callback`;
-    const tokens = await exchangeCodeForTokens(code, redirectUri);
+    const tokens = await exchangeCodeForTokens(code, redirectUri, credentials);
 
     // Get user's email from Google
     const userInfoResponse = await fetch(

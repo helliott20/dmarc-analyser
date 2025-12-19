@@ -63,6 +63,7 @@ interface DomainsListProps {
   domains: Domain[];
   orgSlug: string;
   showVolumeBar?: boolean;
+  ruaEmail: string;
 }
 
 interface DnsStatus {
@@ -218,7 +219,7 @@ function DnsStatusBadges({ domainId, orgSlug }: { domainId: string; orgSlug: str
   );
 }
 
-export function DomainsList({ domains, orgSlug, showVolumeBar = false }: DomainsListProps) {
+export function DomainsList({ domains, orgSlug, showVolumeBar = false, ruaEmail }: DomainsListProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -232,6 +233,7 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
   const [domainStats, setDomainStats] = useState<Map<string, DomainWithStats>>(new Map());
   const [statsLoading, setStatsLoading] = useState(false);
   const [copiedDomainId, setCopiedDomainId] = useState<string | null>(null);
+  const [copiedType, setCopiedType] = useState<'domain' | 'rua' | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(searchParams.get('tag'));
 
   // Update URL when filters change (for back navigation preservation)
@@ -258,15 +260,18 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
     return Array.from(tagMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [domainStats]);
 
-  // Copy external destination verification record to clipboard
-  const copyVerificationRecord = async (e: React.MouseEvent, domainId: string, domainName: string) => {
+  // Copy to clipboard helper
+  const copyToClipboard = async (e: React.MouseEvent, domainId: string, text: string, type: 'domain' | 'rua') => {
     e.preventDefault();
     e.stopPropagation();
-    const record = `${domainName}.report._dmarc`;
     try {
-      await navigator.clipboard.writeText(record);
+      await navigator.clipboard.writeText(text);
       setCopiedDomainId(domainId);
-      setTimeout(() => setCopiedDomainId(null), 2000);
+      setCopiedType(type);
+      setTimeout(() => {
+        setCopiedDomainId(null);
+        setCopiedType(null);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -497,28 +502,28 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
                       </div>
                     )}
                   </div>
-                  {/* Second line: Display name or EDV record */}
+                  {/* Second line: Display name and copy buttons */}
                   <div className="flex items-center gap-2 mt-0.5">
                     {domain.displayName && domain.displayName !== domain.domain && (
                       <p className="text-sm text-muted-foreground truncate">
                         {domain.displayName}
                       </p>
                     )}
-                    {/* Copy external destination verification record */}
+                    {/* Copy domain name */}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            onClick={(e) => copyVerificationRecord(e, domain.id, domain.domain)}
+                            onClick={(e) => copyToClipboard(e, domain.id, domain.domain, 'domain')}
                             className={cn(
                               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
-                              copiedDomainId === domain.id
+                              copiedDomainId === domain.id && copiedType === 'domain'
                                 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                 : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
-                            aria-label="Copy external reporting record"
+                            aria-label="Copy domain name"
                           >
-                            {copiedDomainId === domain.id ? (
+                            {copiedDomainId === domain.id && copiedType === 'domain' ? (
                               <>
                                 <Check className="h-3 w-3" />
                                 Copied
@@ -526,14 +531,47 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false }: Domains
                             ) : (
                               <>
                                 <Copy className="h-3 w-3" />
-                                EDV Record
+                                Domain
                               </>
                             )}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="font-medium">External Destination Verification</p>
-                          <p className="text-xs text-muted-foreground">{domain.domain}.report._dmarc</p>
+                          <p className="text-xs">{domain.domain}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    {/* Copy suggested DMARC record with RUA */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => copyToClipboard(e, domain.id, `v=DMARC1; p=none; rua=mailto:${ruaEmail}`, 'rua')}
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
+                              copiedDomainId === domain.id && copiedType === 'rua'
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            )}
+                            aria-label="Copy DMARC record with RUA"
+                          >
+                            {copiedDomainId === domain.id && copiedType === 'rua' ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                DMARC Record
+                              </>
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p className="font-medium">Suggested DMARC Record</p>
+                          <p className="text-xs text-muted-foreground font-mono">v=DMARC1; p=none; rua=mailto:{ruaEmail}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Click domain for personalized record</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

@@ -124,6 +124,11 @@ export const organizations = pgTable('organizations', {
   trialEndsAt: timestamp('trial_ends_at'),
   currentPeriodEnd: timestamp('current_period_end'),
 
+  // BYOC OAuth (Bring Your Own Credentials) - for organizations using their own Google OAuth
+  googleClientId: text('google_client_id'),
+  googleClientSecret: text('google_client_secret'),
+  useCustomOauth: boolean('use_custom_oauth').default(false),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [

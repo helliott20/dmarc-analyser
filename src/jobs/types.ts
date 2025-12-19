@@ -6,6 +6,11 @@ export interface GmailSyncJobData {
   fullSync?: boolean; // If true, sync all emails, not just recent
 }
 
+export interface CentralInboxJobData {
+  type: 'scheduled' | 'manual';
+  fullSync?: boolean; // If true, sync all emails, not just inbox
+}
+
 export interface ReportParserJobData {
   organizationId: string;
   domainId: string;
@@ -68,6 +73,13 @@ export interface CleanupJobData {
 export interface GmailSyncResult {
   emailsProcessed: number;
   reportsFound: number;
+  errors: string[];
+}
+
+export interface CentralInboxResult {
+  emailsProcessed: number;
+  reportsFound: number;
+  domainsMatched: number;
   errors: string[];
 }
 

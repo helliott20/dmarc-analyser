@@ -1,6 +1,7 @@
 import { db } from '@/db';
-import { gmailAccounts } from '@/db/schema';
+import { gmailAccounts, organizations } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { decryptIfEncrypted } from '@/lib/encryption';
 
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -9,8 +10,56 @@ const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email', // To get the user's email address
 ];
 
-const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+// Default OAuth credentials (from environment)
+const DEFAULT_CLIENT_ID = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+const DEFAULT_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+// Interface for custom OAuth credentials
+export interface OAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+/**
+ * Get OAuth credentials for an organization
+ * If the org has BYOC enabled, use their credentials; otherwise use defaults
+ */
+export async function getOrgOAuthCredentials(orgId: string): Promise<OAuthCredentials | null> {
+  const [org] = await db
+    .select({
+      useCustomOauth: organizations.useCustomOauth,
+      googleClientId: organizations.googleClientId,
+      googleClientSecret: organizations.googleClientSecret,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, orgId));
+
+  if (!org) {
+    return null;
+  }
+
+  // If BYOC is enabled and credentials are configured, use them
+  if (org.useCustomOauth && org.googleClientId && org.googleClientSecret) {
+    const decryptedSecret = decryptIfEncrypted(org.googleClientSecret);
+    if (decryptedSecret) {
+      return {
+        clientId: org.googleClientId,
+        clientSecret: decryptedSecret,
+      };
+    }
+  }
+
+  // Fall back to default credentials (for backward compatibility)
+  // In new setup, this should not be used unless BYOC is enabled
+  if (DEFAULT_CLIENT_ID && DEFAULT_CLIENT_SECRET) {
+    return {
+      clientId: DEFAULT_CLIENT_ID,
+      clientSecret: DEFAULT_CLIENT_SECRET,
+    };
+  }
+
+  return null;
+}
 
 interface GmailTokens {
   access_token: string;
@@ -18,9 +67,19 @@ interface GmailTokens {
   expiry_date: number;
 }
 
-export function getGmailAuthUrl(state: string, redirectUri: string): string {
+export function getGmailAuthUrl(
+  state: string,
+  redirectUri: string,
+  credentials?: OAuthCredentials
+): string {
+  const clientId = credentials?.clientId || DEFAULT_CLIENT_ID;
+
+  if (!clientId) {
+    throw new Error('No OAuth client ID configured');
+  }
+
   const params = new URLSearchParams({
-    client_id: GMAIL_CLIENT_ID!,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: GMAIL_SCOPES.join(' '),
@@ -34,16 +93,24 @@ export function getGmailAuthUrl(state: string, redirectUri: string): string {
 
 export async function exchangeCodeForTokens(
   code: string,
-  redirectUri: string
+  redirectUri: string,
+  credentials?: OAuthCredentials
 ): Promise<GmailTokens> {
+  const clientId = credentials?.clientId || DEFAULT_CLIENT_ID;
+  const clientSecret = credentials?.clientSecret || DEFAULT_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('No OAuth credentials configured');
+  }
+
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: GMAIL_CLIENT_ID!,
-      client_secret: GMAIL_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       code,
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
@@ -64,15 +131,25 @@ export async function exchangeCodeForTokens(
   };
 }
 
-export async function refreshAccessToken(refreshToken: string): Promise<GmailTokens> {
+export async function refreshAccessToken(
+  refreshToken: string,
+  credentials?: OAuthCredentials
+): Promise<GmailTokens> {
+  const clientId = credentials?.clientId || DEFAULT_CLIENT_ID;
+  const clientSecret = credentials?.clientSecret || DEFAULT_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('No OAuth credentials configured');
+  }
+
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: GMAIL_CLIENT_ID!,
-      client_secret: GMAIL_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
@@ -110,7 +187,9 @@ export async function getValidAccessToken(gmailAccountId: string): Promise<strin
   const isExpired = account.tokenExpiry && new Date(account.tokenExpiry).getTime() < Date.now() + 5 * 60 * 1000;
 
   if (isExpired) {
-    const tokens = await refreshAccessToken(account.refreshToken);
+    // Get the org's OAuth credentials (may be BYOC or default)
+    const credentials = await getOrgOAuthCredentials(account.organizationId);
+    const tokens = await refreshAccessToken(account.refreshToken, credentials || undefined);
 
     // Update tokens in database
     await db

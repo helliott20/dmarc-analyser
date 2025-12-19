@@ -44,6 +44,8 @@ import { DnsRecordsCard } from '@/components/domains/dns-records-card';
 import { DomainStats } from '@/components/domains/domain-stats';
 import { PolicyRecommendations } from '@/components/domains/policy-recommendations';
 import { DomainTagsManager } from '@/components/domains/domain-tags-manager';
+import { DomainCopyButtons } from '@/components/domains/domain-copy-buttons';
+import { CENTRAL_INBOX_EMAIL } from '@/lib/central-inbox';
 
 interface PageProps {
   params: Promise<{ slug: string; domainId: string }>;
@@ -247,6 +249,8 @@ export default async function DomainPage({ params }: PageProps) {
             {domain.displayName && (
               <p className="text-muted-foreground">{domain.displayName}</p>
             )}
+            {/* Copy buttons */}
+            <DomainCopyButtons domain={domain.domain} dmarcRecord={domain.dmarcRecord} ruaEmail={CENTRAL_INBOX_EMAIL} />
             {/* Tags */}
             <div className="mt-2">
               <DomainTagsManager
