@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://dmarc-analyser.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://app.dmarcanalyser.io"),
   title: {
     default: "DMARC Analyser - Monitor & Protect Email Reputation",
     template: "%s | DMARC Analyser",
@@ -45,13 +45,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://dmarc-analyser.com",
+    url: "https://app.dmarcanalyser.io",
     siteName: "DMARC Analyser",
     title: "DMARC Analyser - Monitor & Protect Email Reputation",
     description: "Real-time DMARC monitoring with AI-powered insights and email authentication analysis.",
     images: [
       {
-        url: "https://dmarc-analyser.com/og-image.png",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "DMARC Analyser - Email Authentication Monitoring",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DMARC Analyser - Monitor & Protect Email Reputation",
     description: "Real-time DMARC monitoring with AI-powered insights.",
-    images: ["https://dmarc-analyser.com/og-image.png"],
+    images: ["/og-image.png"],
     creator: "@redactbox",
   },
   robots: {
@@ -83,13 +83,14 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/apple-touch-icon.png" },
+      { url: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
