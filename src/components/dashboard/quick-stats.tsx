@@ -105,7 +105,7 @@ export function QuickStats({ orgSlug }: QuickStatsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-3 animate-content-enter-stagger">
       {items.map((item) => (
         <Link key={item.label} href={item.href}>
           <Card className="hover:bg-muted/50 transition-colors cursor-pointer">

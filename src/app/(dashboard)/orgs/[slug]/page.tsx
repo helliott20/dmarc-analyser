@@ -144,9 +144,12 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-1 rounded-full bg-gradient-to-b from-blue-600 to-blue-400" />
+            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          </div>
+          <p className="text-muted-foreground ml-5">
             Overview of {org.organization.name}&apos;s email authentication
           </p>
         </div>
@@ -162,11 +165,13 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
       <QuickStats orgSlug={slug} />
 
       {/* At-a-glance Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-content-enter-stagger">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Messages</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/50">
+              <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tabular-nums">{stats.totalMessages.toLocaleString()}</div>
@@ -177,7 +182,7 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-            <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            <div className={`text-xs font-medium px-2.5 py-1 rounded-full ${
               stats.passRate >= 95 ? 'bg-success/10 text-success' :
               stats.passRate >= 80 ? 'bg-warning/10 text-warning' :
               'bg-destructive/10 text-destructive'
@@ -198,7 +203,9 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Reports</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/50">
+              <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tabular-nums">{stats.reportsLast30Days}</div>
@@ -209,7 +216,9 @@ export default async function OrganizationDashboardPage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Domains</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-950/50">
+              <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tabular-nums">{stats.totalDomains}</div>

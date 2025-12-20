@@ -106,18 +106,20 @@ export function AppSidebar({
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-4 py-3">
-        <Link href="/orgs" className="flex items-center gap-2">
-          {currentOrg?.logoUrl ? (
+      <SidebarHeader className="border-b px-4 py-3 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20 dark:to-transparent">
+        <Link href="/orgs" className="flex items-center gap-2.5 group">
+          <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-900 transition-colors">
             <img
-              src={currentOrg.logoUrl}
-              alt={currentOrg.name}
-              className="h-6 w-6 object-contain"
+              src={currentOrg?.logoUrl || '/dmarc-analyser-logo.png'}
+              alt={currentOrg?.name || 'DMARC Analyser'}
+              className="h-5 w-5 object-contain"
+              onError={(e) => {
+                // Fallback to default logo if custom logo fails to load
+                e.currentTarget.src = '/dmarc-analyser-logo.png';
+              }}
             />
-          ) : (
-            <Shield className="h-6 w-6 text-primary" />
-          )}
-          <span className="font-semibold text-lg">
+          </div>
+          <span className="font-semibold text-lg tracking-tight">
             {currentOrg?.name || 'DMARC Analyser'}
           </span>
         </Link>
