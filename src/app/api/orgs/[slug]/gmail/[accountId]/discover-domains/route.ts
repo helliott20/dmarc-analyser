@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
-import { organizations, orgMembers, gmailAccounts, domains } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { organizations, orgMembers, gmailAccounts, domains, discoveredDomains } from '@/db/schema';
+import { eq, and, isNotNull } from 'drizzle-orm';
 import { getValidAccessToken } from '@/lib/gmail';
 
 interface RouteParams {
@@ -124,6 +124,20 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const existingDomainSet = new Set(existingDomains.map(d => d.domain.toLowerCase()));
 
+    // Get dismissed discovered domains (user chose to ignore these)
+    const dismissedDomains = await db
+      .select({ domain: discoveredDomains.domain })
+      .from(discoveredDomains)
+      .where(
+        and(
+          eq(discoveredDomains.organizationId, membership.organization.id),
+          eq(discoveredDomains.gmailAccountId, accountId),
+          isNotNull(discoveredDomains.dismissedAt)
+        )
+      );
+
+    const dismissedDomainSet = new Set(dismissedDomains.map(d => d.domain.toLowerCase()));
+
     // Get access token
     const accessToken = await getValidAccessToken(accountId);
 
@@ -157,7 +171,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const messageIds: string[] = (searchData.messages || []).map((m: { id: string }) => m.id);
 
     // Extract domains from email subjects
-    const discoveredDomains = new Map<string, number>(); // domain -> count
+    const discoveredDomainsMap = new Map<string, number>(); // domain -> count
 
     // Process messages in batches to avoid rate limits
     const batchSize = 10;
@@ -192,8 +206,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       const results = await Promise.all(messagePromises);
 
       for (const domain of results) {
-        if (domain && !existingDomainSet.has(domain)) {
-          discoveredDomains.set(domain, (discoveredDomains.get(domain) || 0) + 1);
+        if (domain && !existingDomainSet.has(domain) && !dismissedDomainSet.has(domain)) {
+          discoveredDomainsMap.set(domain, (discoveredDomainsMap.get(domain) || 0) + 1);
         }
       }
 
@@ -204,7 +218,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Sort by count (most reports first)
-    const suggestions = Array.from(discoveredDomains.entries())
+    const suggestions = Array.from(discoveredDomainsMap.entries())
       .map(([domain, count]) => ({ domain, reportCount: count }))
       .sort((a, b) => b.reportCount - a.reportCount);
 

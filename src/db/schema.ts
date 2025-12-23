@@ -662,6 +662,36 @@ export const aiRecommendationsCache = pgTable('ai_recommendations_cache', {
   index('ai_cache_expires_idx').on(table.expiresAt),
 ]);
 
+// ============ DISCOVERED DOMAINS ============
+// Tracks domains discovered in Gmail DMARC reports that haven't been added yet
+// Used to prevent duplicate notification emails
+
+export const discoveredDomains = pgTable('discovered_domains', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+  gmailAccountId: uuid('gmail_account_id').references(() => gmailAccounts.id, { onDelete: 'cascade' }).notNull(),
+  domain: varchar('domain', { length: 255 }).notNull(),
+
+  // Discovery tracking
+  firstDiscoveredAt: timestamp('first_discovered_at').defaultNow().notNull(),
+  lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+  reportCount: integer('report_count').default(1).notNull(),
+
+  // Notification tracking - prevents duplicate emails
+  notifiedAt: timestamp('notified_at'),
+
+  // User actions
+  dismissedAt: timestamp('dismissed_at'), // User chose to ignore this domain
+  addedAt: timestamp('added_at'), // Domain was added to the org (links to domains table)
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('discovered_domains_org_gmail_domain_idx').on(table.organizationId, table.gmailAccountId, table.domain),
+  index('discovered_domains_org_idx').on(table.organizationId),
+  index('discovered_domains_notified_idx').on(table.notifiedAt),
+]);
+
 // ============ RELATIONS ============
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -762,4 +792,9 @@ export const aiIntegrationsRelations = relations(aiIntegrations, ({ one }) => ({
 
 export const aiRecommendationsCacheRelations = relations(aiRecommendationsCache, ({ one }) => ({
   domain: one(domains, { fields: [aiRecommendationsCache.domainId], references: [domains.id] }),
+}));
+
+export const discoveredDomainsRelations = relations(discoveredDomains, ({ one }) => ({
+  organization: one(organizations, { fields: [discoveredDomains.organizationId], references: [organizations.id] }),
+  gmailAccount: one(gmailAccounts, { fields: [discoveredDomains.gmailAccountId], references: [gmailAccounts.id] }),
 }));

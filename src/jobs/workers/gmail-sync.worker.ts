@@ -3,8 +3,8 @@ import { createRedisConnection } from '../redis';
 import { QUEUE_NAMES, alertsQueue, ipEnrichmentQueue } from '../queues';
 import type { GmailSyncJobData, GmailSyncResult, AlertsJobData, IpEnrichmentJobData } from '../types';
 import { db } from '@/db';
-import { gmailAccounts, domains, sources, knownSenders, orgMembers, users } from '@/db/schema';
-import { eq, and, isNull, or } from 'drizzle-orm';
+import { gmailAccounts, domains, sources, knownSenders, orgMembers, users, discoveredDomains } from '@/db/schema';
+import { eq, and, isNull, or, inArray } from 'drizzle-orm';
 import { discoverDomainsFromGmail } from '@/lib/domain-discovery';
 import { sendDomainDiscoveryEmail } from '@/lib/email-service';
 import { autoMatchSource } from '@/lib/known-sender-matcher';
@@ -404,17 +404,94 @@ async function discoverAndNotifyNewDomains(gmailAccountId: string, organizationI
       .from(gmailAccounts)
       .where(eq(gmailAccounts.id, gmailAccountId));
 
-    // Discover domains from Gmail
+    // Discover domains from Gmail (excludes already-added domains)
     const discovery = await discoverDomainsFromGmail(gmailAccountId, organizationId);
 
     if (discovery.suggestions.length === 0) {
       return;
     }
 
-    console.log(`[Gmail Sync] Discovered ${discovery.suggestions.length} new domains`);
+    console.log(`[Gmail Sync] Found ${discovery.suggestions.length} potential domains in DMARC reports`);
 
-    // Only send email if notifications are enabled
-    if (account?.notifyNewDomains) {
+    // Get existing tracked discovered domains for this Gmail account
+    const existingDiscovered = await db
+      .select({
+        domain: discoveredDomains.domain,
+        notifiedAt: discoveredDomains.notifiedAt,
+        dismissedAt: discoveredDomains.dismissedAt,
+      })
+      .from(discoveredDomains)
+      .where(
+        and(
+          eq(discoveredDomains.organizationId, organizationId),
+          eq(discoveredDomains.gmailAccountId, gmailAccountId)
+        )
+      );
+
+    const existingMap = new Map(existingDiscovered.map(d => [d.domain, d]));
+
+    // Filter to only domains that need notification (new or not yet notified, and not dismissed)
+    const domainsToNotify: typeof discovery.suggestions = [];
+    const domainsToInsert: string[] = [];
+    const domainsToUpdate: string[] = [];
+
+    for (const suggestion of discovery.suggestions) {
+      const existing = existingMap.get(suggestion.domain);
+
+      if (!existing) {
+        // New discovery - insert and notify
+        domainsToInsert.push(suggestion.domain);
+        domainsToNotify.push(suggestion);
+      } else if (existing.dismissedAt) {
+        // User dismissed this domain - skip
+        continue;
+      } else if (!existing.notifiedAt) {
+        // Exists but not yet notified - notify
+        domainsToNotify.push(suggestion);
+        domainsToUpdate.push(suggestion.domain);
+      }
+      // else: already notified - skip
+    }
+
+    // Insert new discovered domains
+    if (domainsToInsert.length > 0) {
+      const insertData = domainsToInsert.map(domain => {
+        const suggestion = discovery.suggestions.find(s => s.domain === domain)!;
+        return {
+          organizationId,
+          gmailAccountId,
+          domain,
+          reportCount: suggestion.reportCount,
+        };
+      });
+
+      await db.insert(discoveredDomains).values(insertData);
+      console.log(`[Gmail Sync] Tracked ${domainsToInsert.length} new discovered domains`);
+    }
+
+    // Update lastSeenAt and reportCount for existing domains
+    for (const suggestion of discovery.suggestions) {
+      const existing = existingMap.get(suggestion.domain);
+      if (existing) {
+        await db
+          .update(discoveredDomains)
+          .set({
+            lastSeenAt: new Date(),
+            reportCount: suggestion.reportCount,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(discoveredDomains.organizationId, organizationId),
+              eq(discoveredDomains.gmailAccountId, gmailAccountId),
+              eq(discoveredDomains.domain, suggestion.domain)
+            )
+          );
+      }
+    }
+
+    // Only send email if there are new domains to notify about and notifications are enabled
+    if (domainsToNotify.length > 0 && account?.notifyNewDomains) {
       // Get org owner emails for notification
       const admins = await db
         .select({ email: users.email })
@@ -433,10 +510,30 @@ async function discoverAndNotifyNewDomains(gmailAccountId: string, organizationI
         await sendDomainDiscoveryEmail({
           organizationId,
           recipients,
-          domains: discovery.suggestions,
+          domains: domainsToNotify,
         });
-        console.log(`[Gmail Sync] Sent domain discovery email to ${recipients.length} recipients`);
+
+        // Mark all notified domains as notified (both new inserts and existing unnotified)
+        const allNotifiedDomains = domainsToNotify.map(d => d.domain);
+
+        await db
+          .update(discoveredDomains)
+          .set({
+            notifiedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(discoveredDomains.organizationId, organizationId),
+              eq(discoveredDomains.gmailAccountId, gmailAccountId),
+              inArray(discoveredDomains.domain, allNotifiedDomains)
+            )
+          );
+
+        console.log(`[Gmail Sync] Sent domain discovery email for ${domainsToNotify.length} domains to ${recipients.length} recipients`);
       }
+    } else if (domainsToNotify.length === 0) {
+      console.log(`[Gmail Sync] No new domains to notify about (all already notified or dismissed)`);
     }
   } catch (error) {
     console.error('[Gmail Sync] Domain discovery error:', error);
