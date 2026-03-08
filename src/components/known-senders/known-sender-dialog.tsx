@@ -31,11 +31,19 @@ interface KnownSender {
   isGlobal: boolean;
 }
 
+interface KnownSenderPrefill {
+  name?: string;
+  ipRanges?: string;
+  description?: string;
+  category?: string;
+}
+
 interface KnownSenderDialogProps {
   orgSlug: string;
   sender?: KnownSender;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prefill?: KnownSenderPrefill;
 }
 
 const CATEGORIES = [
@@ -51,6 +59,7 @@ export function KnownSenderDialog({
   sender,
   open,
   onOpenChange,
+  prefill,
 }: KnownSenderDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -61,12 +70,12 @@ export function KnownSenderDialog({
     errors: string[];
   } | null>(null);
   const [formData, setFormData] = useState({
-    name: sender?.name || '',
-    description: sender?.description || '',
-    category: sender?.category || 'other',
+    name: sender?.name || prefill?.name || '',
+    description: sender?.description || prefill?.description || '',
+    category: sender?.category || prefill?.category || 'other',
     logoUrl: sender?.logoUrl || '',
     website: sender?.website || '',
-    ipRanges: sender?.ipRanges?.join('\n') || '',
+    ipRanges: sender?.ipRanges?.join('\n') || prefill?.ipRanges || '',
     dkimDomains: sender?.dkimDomains?.join('\n') || '',
     spfInclude: sender?.spfInclude || '',
   });

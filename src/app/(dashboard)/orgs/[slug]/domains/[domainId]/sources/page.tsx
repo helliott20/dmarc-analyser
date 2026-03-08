@@ -8,8 +8,10 @@ import {
   domains,
   sources,
   knownSenders,
+  records,
+  reports,
 } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import {
   Card,
   CardContent,
@@ -19,6 +21,9 @@ import {
 } from '@/components/ui/card';
 import {
   AlertTriangle,
+  Key,
+  Mail,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   Breadcrumb,
@@ -39,7 +44,7 @@ const FAIL_THRESHOLD = 0.5; // 50% pass rate threshold for "failing" filter
 
 interface PageProps {
   params: Promise<{ slug: string; domainId: string }>;
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; sort?: string; dir?: string }>;
 }
 
 async function getDomainWithAccess(
@@ -68,7 +73,8 @@ async function getDomainWithAccess(
 }
 
 async function getDomainSources(domainId: string) {
-  return db
+  // Get sources with known senders
+  const sourcesData = await db
     .select({
       source: sources,
       knownSender: knownSenders,
@@ -77,12 +83,46 @@ async function getDomainSources(domainId: string) {
     .leftJoin(knownSenders, eq(sources.knownSenderId, knownSenders.id))
     .where(eq(sources.domainId, domainId))
     .orderBy(desc(sources.totalMessages));
+
+  // Get per-source SPF/DKIM aggregate stats from records
+  const authStats = await db
+    .select({
+      sourceIp: records.sourceIp,
+      spfPass: sql<number>`sum(case when ${records.dmarcSpf} = 'pass' then ${records.count} else 0 end)::int`,
+      spfFail: sql<number>`sum(case when ${records.dmarcSpf} = 'fail' then ${records.count} else 0 end)::int`,
+      dkimPass: sql<number>`sum(case when ${records.dmarcDkim} = 'pass' then ${records.count} else 0 end)::int`,
+      dkimFail: sql<number>`sum(case when ${records.dmarcDkim} = 'fail' then ${records.count} else 0 end)::int`,
+    })
+    .from(records)
+    .innerJoin(reports, eq(records.reportId, reports.id))
+    .where(eq(reports.domainId, domainId))
+    .groupBy(records.sourceIp);
+
+  // Build a lookup map by sourceIp
+  const authStatsMap = new Map(
+    authStats.map((s) => [s.sourceIp, s])
+  );
+
+  return sourcesData.map((s) => {
+    const stats = authStatsMap.get(s.source.sourceIp);
+    return {
+      ...s,
+      authStats: stats
+        ? {
+            spfPass: stats.spfPass || 0,
+            spfFail: stats.spfFail || 0,
+            dkimPass: stats.dkimPass || 0,
+            dkimFail: stats.dkimFail || 0,
+          }
+        : { spfPass: 0, spfFail: 0, dkimPass: 0, dkimFail: 0 },
+    };
+  });
 }
 
 
 export default async function SourcesPage({ params, searchParams }: PageProps) {
   const { slug, domainId } = await params;
-  const { filter } = await searchParams;
+  const { filter, sort, dir } = await searchParams;
   const currentFilter = (filter as SourceFilter) || 'all';
   const session = await auth();
 
@@ -191,6 +231,22 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
       ? sourcesData.filter((s) => isSourceFailing(s.source))
       : sourcesData.filter((s) => s.source.sourceType === currentFilter);
 
+  // Failure summary for when "failing" filter is active
+  const failingSummary = currentFilter === 'failing' ? (() => {
+    const failingData = sourcesData.filter((s) => isSourceFailing(s.source));
+    let spfOnly = 0;
+    let dkimOnly = 0;
+    let both = 0;
+    for (const s of failingData) {
+      const hasSpfIssue = s.authStats.spfFail > 0;
+      const hasDkimIssue = s.authStats.dkimFail > 0;
+      if (hasSpfIssue && hasDkimIssue) both++;
+      else if (hasSpfIssue) spfOnly++;
+      else if (hasDkimIssue) dkimOnly++;
+    }
+    return { total: failingData.length, spfOnly, dkimOnly, both };
+  })() : null;
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -214,14 +270,14 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Email Sources</h1>
           <p className="text-muted-foreground">
             All IP addresses that have sent email for {domain.domain}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <ExportButton orgSlug={slug} domainId={domainId} />
           <AutoMatchButton orgSlug={slug} domainId={domainId} />
           <SourcesEnrichment
@@ -233,7 +289,7 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
@@ -283,6 +339,42 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
       {/* Filter Bar */}
       <SourcesFilterBar counts={filterCounts} />
 
+      {/* Failure Summary Card - shown when Failing filter is active */}
+      {failingSummary && failingSummary.total > 0 && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-red-800 dark:text-red-200">
+                  {failingSummary.total} source{failingSummary.total !== 1 ? 's' : ''} failing authentication
+                </p>
+                <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                  {failingSummary.spfOnly > 0 && (
+                    <div className="flex items-center gap-1.5 text-red-700 dark:text-red-300">
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>{failingSummary.spfOnly} SPF only</span>
+                    </div>
+                  )}
+                  {failingSummary.dkimOnly > 0 && (
+                    <div className="flex items-center gap-1.5 text-red-700 dark:text-red-300">
+                      <Key className="h-3.5 w-3.5" />
+                      <span>{failingSummary.dkimOnly} DKIM only</span>
+                    </div>
+                  )}
+                  {failingSummary.both > 0 && (
+                    <div className="flex items-center gap-1.5 text-red-700 dark:text-red-300">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      <span>{failingSummary.both} both SPF &amp; DKIM</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Sources Table */}
       <Card>
         <CardHeader>
@@ -311,7 +403,7 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
         </CardHeader>
         <CardContent>
           <SourcesTable
-            sources={filteredSources.map(({ source, knownSender }) => ({
+            sources={filteredSources.map(({ source, knownSender, authStats }) => ({
               source: {
                 id: source.id,
                 sourceIp: source.sourceIp,
@@ -325,6 +417,10 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
                 passedMessages: Number(source.passedMessages),
                 failedMessages: Number(source.failedMessages),
                 lastSeen: source.lastSeen?.toISOString() || null,
+                spfPass: authStats.spfPass,
+                spfFail: authStats.spfFail,
+                dkimPass: authStats.dkimPass,
+                dkimFail: authStats.dkimFail,
               },
               knownSender: knownSender
                 ? {
@@ -337,6 +433,8 @@ export default async function SourcesPage({ params, searchParams }: PageProps) {
             }))}
             orgSlug={slug}
             domainId={domainId}
+            initialSort={sort || undefined}
+            initialDir={(dir as 'asc' | 'desc') || undefined}
             emptyMessage={sourcesData.length === 0 ? 'No sources yet' : 'No matching sources'}
             emptyDescription={
               sourcesData.length === 0
