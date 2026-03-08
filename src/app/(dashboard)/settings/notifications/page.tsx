@@ -6,30 +6,45 @@ import { eq } from 'drizzle-orm';
 import { NotificationsForm } from '@/components/settings/notifications-form';
 
 async function getUserPreferences(userId: string) {
-  const [prefs] = await db
-    .select()
-    .from(userPreferences)
-    .where(eq(userPreferences.userId, userId));
+  try {
+    const [prefs] = await db
+      .select()
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId));
 
-  // If no preferences exist, create default ones
-  if (!prefs) {
-    const [newPrefs] = await db
-      .insert(userPreferences)
-      .values({
-        userId,
-        emailLoginAlerts: true,
-        emailWeeklyDigest: true,
-        emailAlertNotifications: true,
-        emailAlertSeverity: 'warning,critical',
-        emailDigestFrequency: 'weekly',
-        theme: 'system',
-      })
-      .returning();
+    // If no preferences exist, create default ones
+    if (!prefs) {
+      const [newPrefs] = await db
+        .insert(userPreferences)
+        .values({
+          userId,
+          emailLoginAlerts: true,
+          emailWeeklyDigest: true,
+          emailAlertNotifications: true,
+          emailAlertSeverity: 'warning,critical',
+          emailDigestFrequency: 'weekly',
+          theme: 'system',
+        })
+        .returning();
 
-    return newPrefs;
+      return newPrefs;
+    }
+
+    return prefs;
+  } catch (error) {
+    console.error('Failed to load user preferences:', error);
+    // Return defaults if DB query fails (e.g. missing columns before migration)
+    return {
+      emailLoginAlerts: true,
+      emailWeeklyDigest: true,
+      emailAlertNotifications: true,
+      emailAlertSeverity: 'warning,critical',
+      emailDigestFrequency: 'weekly',
+      emailQuietHoursStart: null,
+      emailQuietHoursEnd: null,
+      theme: 'system' as const,
+    };
   }
-
-  return prefs;
 }
 
 export default async function NotificationsPage() {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db';
-import { organizations, orgMembers, domains, sources, reports, records, knownSenders } from '@/db/schema';
+import { organizations, orgMembers, domains, sources, reports, records, knownSenders, dkimResults, spfResults } from '@/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
 interface RouteParams {
@@ -97,6 +97,103 @@ export async function GET(request: Request, { params }: RouteParams) {
       passRate: totalMessages > 0 ? Math.round((passedMessages / totalMessages) * 100) : 0,
     }));
 
+    // Get auth failure details for this source IP across all records
+    const authDetails = await db
+      .select({
+        recordId: records.id,
+        dmarcDkim: records.dmarcDkim,
+        dmarcSpf: records.dmarcSpf,
+        disposition: records.disposition,
+        count: records.count,
+        headerFrom: records.headerFrom,
+        envelopeFrom: records.envelopeFrom,
+        policyOverrideReason: records.policyOverrideReason,
+      })
+      .from(records)
+      .innerJoin(reports, eq(records.reportId, reports.id))
+      .where(
+        and(
+          eq(reports.domainId, domainId),
+          eq(records.sourceIp, source.sourceIp)
+        )
+      )
+      .orderBy(desc(reports.dateRangeBegin))
+      .limit(100);
+
+    // Get DKIM and SPF result details for these records
+    const recordIds = authDetails.map(r => r.recordId);
+    let dkimDetails: { recordId: string; domain: string; selector: string | null; result: string }[] = [];
+    let spfDetails: { recordId: string; domain: string; scope: string | null; result: string }[] = [];
+
+    if (recordIds.length > 0) {
+      [dkimDetails, spfDetails] = await Promise.all([
+        db
+          .select({
+            recordId: dkimResults.recordId,
+            domain: dkimResults.domain,
+            selector: dkimResults.selector,
+            result: dkimResults.result,
+          })
+          .from(dkimResults)
+          .where(sql`${dkimResults.recordId} IN ${recordIds}`),
+        db
+          .select({
+            recordId: spfResults.recordId,
+            domain: spfResults.domain,
+            scope: spfResults.scope,
+            result: spfResults.result,
+          })
+          .from(spfResults)
+          .where(sql`${spfResults.recordId} IN ${recordIds}`),
+      ]);
+    }
+
+    // Aggregate auth failure analysis
+    const dkimFailCount = dkimDetails.filter(d => d.result !== 'pass').length;
+    const spfFailCount = spfDetails.filter(s => s.result !== 'pass').length;
+    const dkimPassCount = dkimDetails.filter(d => d.result === 'pass').length;
+    const spfPassCount = spfDetails.filter(s => s.result === 'pass').length;
+
+    // Group DKIM failures by domain
+    const dkimFailuresByDomain: Record<string, { count: number; results: string[]; selectors: string[] }> = {};
+    dkimDetails.filter(d => d.result !== 'pass').forEach(d => {
+      if (!dkimFailuresByDomain[d.domain]) {
+        dkimFailuresByDomain[d.domain] = { count: 0, results: [], selectors: [] };
+      }
+      dkimFailuresByDomain[d.domain].count++;
+      if (!dkimFailuresByDomain[d.domain].results.includes(d.result)) {
+        dkimFailuresByDomain[d.domain].results.push(d.result);
+      }
+      if (d.selector && !dkimFailuresByDomain[d.domain].selectors.includes(d.selector)) {
+        dkimFailuresByDomain[d.domain].selectors.push(d.selector);
+      }
+    });
+
+    // Group SPF failures by domain
+    const spfFailuresByDomain: Record<string, { count: number; results: string[] }> = {};
+    spfDetails.filter(s => s.result !== 'pass').forEach(s => {
+      if (!spfFailuresByDomain[s.domain]) {
+        spfFailuresByDomain[s.domain] = { count: 0, results: [] };
+      }
+      spfFailuresByDomain[s.domain].count++;
+      if (!spfFailuresByDomain[s.domain].results.includes(s.result)) {
+        spfFailuresByDomain[s.domain].results.push(s.result);
+      }
+    });
+
+    // Count dispositions
+    const dispositions = authDetails.reduce((acc, r) => {
+      acc[r.disposition] = (acc[r.disposition] || 0) + r.count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Collect policy override reasons
+    const overrideReasons = authDetails
+      .filter(r => r.policyOverrideReason)
+      .map(r => r.policyOverrideReason)
+      .flat()
+      .filter(Boolean);
+
     return NextResponse.json({
       source: {
         id: source.id,
@@ -122,6 +219,22 @@ export async function GET(request: Request, { params }: RouteParams) {
         isGlobal: knownSender.isGlobal,
       } : null,
       reports: formattedReports,
+      failureAnalysis: {
+        dkim: {
+          total: dkimDetails.length,
+          passed: dkimPassCount,
+          failed: dkimFailCount,
+          failuresByDomain: dkimFailuresByDomain,
+        },
+        spf: {
+          total: spfDetails.length,
+          passed: spfPassCount,
+          failed: spfFailCount,
+          failuresByDomain: spfFailuresByDomain,
+        },
+        dispositions,
+        overrideReasons,
+      },
     });
   } catch (error) {
     console.error('Failed to get source reports:', error);
