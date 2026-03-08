@@ -89,7 +89,7 @@ export function SourcesFilterBar({ counts }: SourcesFilterBarProps) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5 sm:gap-2 overflow-x-auto">
       {FILTER_OPTIONS.map((option) => {
         const count = counts[option.value];
         const isActive = currentFilter === option.value;
@@ -107,7 +107,7 @@ export function SourcesFilterBar({ counts }: SourcesFilterBarProps) {
             size="sm"
             onClick={() => setFilter(option.value)}
             className={cn(
-              'rounded-full px-4 py-1 h-8 transition-colors',
+              'rounded-full px-3 sm:px-4 py-1 h-7 sm:h-8 text-xs sm:text-sm transition-colors',
               isActive ? option.activeColor : 'bg-muted hover:bg-muted/80'
             )}
           >

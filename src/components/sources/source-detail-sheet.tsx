@@ -39,7 +39,9 @@ import {
   Lightbulb,
   Ban,
   AlertOctagon,
+  Plus,
 } from 'lucide-react';
+import { KnownSenderDialog } from '@/components/known-senders/known-sender-dialog';
 
 interface SourceReport {
   id: string;
@@ -300,6 +302,7 @@ export function SourceDetailSheet({
   const [reports, setReports] = useState<SourceReport[]>([]);
   const [failureAnalysis, setFailureAnalysis] = useState<FailureAnalysis | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'failures' | 'reports'>('overview');
+  const [showAddSender, setShowAddSender] = useState(false);
 
   const handleClassify = async (newType: string) => {
     if (!sourceId || !source) return;
@@ -368,7 +371,7 @@ export function SourceDetailSheet({
 
   return (
     <Sheet open={!!sourceId} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
@@ -441,8 +444,21 @@ export function SourceDetailSheet({
                   </div>
                 )}
 
+                {/* Add as Known Sender - shown when no sender is matched */}
+                {!knownSender && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setShowAddSender(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Add as Known Sender
+                  </Button>
+                )}
+
                 {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 rounded-lg bg-muted/50">
                     <p className="text-2xl font-bold">
                       {source.totalMessages.toLocaleString()}
@@ -500,7 +516,7 @@ export function SourceDetailSheet({
               <div className="flex gap-1 p-1 rounded-lg bg-muted">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                     activeTab === 'overview'
                       ? 'bg-background shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -510,7 +526,7 @@ export function SourceDetailSheet({
                 </button>
                 <button
                   onClick={() => setActiveTab('failures')}
-                  className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors relative ${
+                  className={`flex-1 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors relative ${
                     activeTab === 'failures'
                       ? 'bg-background shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -523,7 +539,7 @@ export function SourceDetailSheet({
                 </button>
                 <button
                   onClick={() => setActiveTab('reports')}
-                  className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                     activeTab === 'reports'
                       ? 'bg-background shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -942,6 +958,40 @@ export function SourceDetailSheet({
           </div>
         )}
       </SheetContent>
+
+      {/* Add Known Sender Dialog */}
+      {source && showAddSender && (
+        <KnownSenderDialog
+          orgSlug={orgSlug}
+          open={showAddSender}
+          onOpenChange={(open) => {
+            setShowAddSender(open);
+            if (!open && sourceId) {
+              // Refresh source data after adding sender
+              const fetchSourceDetails = async () => {
+                try {
+                  const response = await fetch(
+                    `/api/orgs/${orgSlug}/domains/${domainId}/sources/${sourceId}/reports`
+                  );
+                  if (response.ok) {
+                    const data = await response.json();
+                    setSource(data.source);
+                    setKnownSender(data.knownSender);
+                  }
+                } catch {
+                  // Silently handle
+                }
+              };
+              fetchSourceDetails();
+              router.refresh();
+            }
+          }}
+          prefill={{
+            name: source.organization || source.hostname || '',
+            ipRanges: source.sourceIp,
+          }}
+        />
+      )}
     </Sheet>
   );
 }
