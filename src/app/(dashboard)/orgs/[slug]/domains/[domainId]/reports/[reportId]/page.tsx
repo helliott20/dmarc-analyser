@@ -52,6 +52,10 @@ import {
   Shield,
   Server,
   AlertTriangle,
+  Key,
+  Lightbulb,
+  AlertOctagon,
+  Ban,
 } from 'lucide-react';
 
 interface PageProps {
@@ -496,6 +500,218 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Failure Analysis */}
+        {(() => {
+          const failedRecords = recordsData.filter(
+            (r) => r.dmarcDkim !== 'pass' && r.dmarcSpf !== 'pass'
+          );
+          const failedMessages = failedRecords.reduce((sum, r) => sum + r.count, 0);
+
+          if (failedMessages === 0) return null;
+
+          // Aggregate DKIM failures
+          const dkimFailures: Record<string, { results: string[]; selectors: string[]; count: number }> = {};
+          failedRecords.forEach(r => {
+            r.dkimResults.forEach(d => {
+              if (d.result !== 'pass') {
+                if (!dkimFailures[d.domain]) {
+                  dkimFailures[d.domain] = { results: [], selectors: [], count: 0 };
+                }
+                dkimFailures[d.domain].count++;
+                if (!dkimFailures[d.domain].results.includes(d.result)) {
+                  dkimFailures[d.domain].results.push(d.result);
+                }
+                if (d.selector && !dkimFailures[d.domain].selectors.includes(d.selector)) {
+                  dkimFailures[d.domain].selectors.push(d.selector);
+                }
+              }
+            });
+          });
+
+          // Aggregate SPF failures
+          const spfFailures: Record<string, { results: string[]; count: number }> = {};
+          failedRecords.forEach(r => {
+            r.spfResults.forEach(s => {
+              if (s.result !== 'pass') {
+                if (!spfFailures[s.domain]) {
+                  spfFailures[s.domain] = { results: [], count: 0 };
+                }
+                spfFailures[s.domain].count++;
+                if (!spfFailures[s.domain].results.includes(s.result)) {
+                  spfFailures[s.domain].results.push(s.result);
+                }
+              }
+            });
+          });
+
+          // Disposition breakdown
+          const dispositions = failedRecords.reduce((acc, r) => {
+            acc[r.disposition] = (acc[r.disposition] || 0) + r.count;
+            return acc;
+          }, {} as Record<string, number>);
+
+          // Remediation tips
+          const tips: { title: string; description: string; severity: 'critical' | 'warning' | 'info' }[] = [];
+
+          const hasDkimPermerror = Object.values(dkimFailures).some(f => f.results.includes('permerror'));
+          const hasSpfPermerror = Object.values(spfFailures).some(f => f.results.includes('permerror'));
+          const hasSpfSoftfail = Object.values(spfFailures).some(f => f.results.includes('softfail'));
+
+          if (hasDkimPermerror) {
+            tips.push({
+              title: 'DKIM DNS record error',
+              description: 'One or more DKIM public key records could not be parsed. Check the formatting of your DKIM TXT records in DNS.',
+              severity: 'critical',
+            });
+          }
+          if (hasSpfPermerror) {
+            tips.push({
+              title: 'SPF record error',
+              description: 'Your SPF record has a syntax error or exceeds the 10 DNS lookup limit. Review and simplify your SPF record.',
+              severity: 'critical',
+            });
+          }
+
+          const unknownSources = failedRecords.filter(r => !r.knownSender && r.source?.sourceType === 'unknown');
+          if (unknownSources.length > 0) {
+            const unknownMsgs = unknownSources.reduce((s, r) => s + r.count, 0);
+            tips.push({
+              title: `${unknownMsgs.toLocaleString()} failed messages from unclassified sources`,
+              description: 'Review these sources to determine if they are legitimate senders that need SPF/DKIM configuration, or if they are unauthorised.',
+              severity: 'warning',
+            });
+          }
+
+          if (hasSpfSoftfail) {
+            tips.push({
+              title: 'SPF soft fail detected',
+              description: 'Some senders are not included in your SPF record. If legitimate, add their IP ranges or include mechanisms. If not, tighten your SPF to use -all.',
+              severity: 'info',
+            });
+          }
+
+          if (dispositions['none'] && dispositions['none'] === failedMessages) {
+            tips.push({
+              title: 'Failures not being enforced',
+              description: 'All failed messages were still delivered because your DMARC policy is set to "none". Consider moving to "quarantine" once you\'ve identified all legitimate senders.',
+              severity: 'warning',
+            });
+          }
+
+          return (
+            <Card className="border-red-200 dark:border-red-900">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                  <AlertTriangle className="h-5 w-5" />
+                  Failure Analysis
+                </CardTitle>
+                <CardDescription>
+                  {failedMessages.toLocaleString()} messages failed DMARC authentication in this report
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Disposition breakdown */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <p className="text-xl font-bold">{(dispositions['none'] || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Delivered anyway</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
+                    <p className="text-xl font-bold text-yellow-600">{(dispositions['quarantine'] || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Quarantined</p>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                    <p className="text-xl font-bold text-red-600">{(dispositions['reject'] || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Rejected</p>
+                  </div>
+                </div>
+
+                {/* DKIM/SPF failure details */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {Object.keys(dkimFailures).length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-1">
+                        <Key className="h-3.5 w-3.5" /> DKIM Failures
+                      </h4>
+                      {Object.entries(dkimFailures).map(([domain, info]) => (
+                        <div key={domain} className="p-2 rounded border bg-red-50 dark:bg-red-900/10 text-sm">
+                          <code className="text-xs font-medium">{domain}</code>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {info.results.map(r => (
+                              <Badge key={r} variant="outline" className="text-xs border-red-300">
+                                {r} ({info.count}x)
+                              </Badge>
+                            ))}
+                          </div>
+                          {info.selectors.length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Selectors: {info.selectors.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {Object.keys(spfFailures).length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium flex items-center gap-1">
+                        <Mail className="h-3.5 w-3.5" /> SPF Failures
+                      </h4>
+                      {Object.entries(spfFailures).map(([domain, info]) => (
+                        <div key={domain} className="p-2 rounded border bg-red-50 dark:bg-red-900/10 text-sm">
+                          <code className="text-xs font-medium">{domain}</code>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {info.results.map(r => (
+                              <Badge key={r} variant="outline" className="text-xs border-red-300">
+                                {r} ({info.count}x)
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Remediation tips */}
+                {tips.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium flex items-center gap-1">
+                      <Lightbulb className="h-3.5 w-3.5 text-yellow-500" /> Recommended Actions
+                    </h4>
+                    {tips.map((tip, i) => (
+                      <div
+                        key={i}
+                        className={`p-3 rounded-lg border-l-4 bg-muted/30 ${
+                          tip.severity === 'critical'
+                            ? 'border-l-red-500'
+                            : tip.severity === 'warning'
+                            ? 'border-l-yellow-500'
+                            : 'border-l-blue-500'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {tip.severity === 'critical' ? (
+                            <AlertOctagon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          ) : tip.severity === 'warning' ? (
+                            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          )}
+                          <div>
+                            <p className="text-sm font-medium">{tip.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{tip.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Policy Info */}
         <Card>

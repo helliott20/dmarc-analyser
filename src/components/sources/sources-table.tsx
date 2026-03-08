@@ -116,8 +116,7 @@ export function SourcesTable({
             <TableHead>Known Sender</TableHead>
             <TableHead>Location</TableHead>
             <TableHead className="text-right">Total</TableHead>
-            <TableHead className="text-right">Passed</TableHead>
-            <TableHead className="text-right">Failed</TableHead>
+            <TableHead className="text-right">Pass Rate</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Last Seen</TableHead>
           </TableRow>
@@ -192,11 +191,29 @@ export function SourcesTable({
               <TableCell className="text-right font-medium">
                 {Number(source.totalMessages).toLocaleString()}
               </TableCell>
-              <TableCell className="text-right text-green-600">
-                {Number(source.passedMessages).toLocaleString()}
-              </TableCell>
-              <TableCell className="text-right text-red-600">
-                {Number(source.failedMessages).toLocaleString()}
+              <TableCell className="text-right">
+                {(() => {
+                  const total = Number(source.totalMessages);
+                  const passed = Number(source.passedMessages);
+                  const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                  return (
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${
+                            rate >= 90 ? 'bg-green-500' : rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${rate}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        rate >= 90 ? 'text-green-600' : rate >= 70 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {rate}%
+                      </span>
+                    </div>
+                  );
+                })()}
               </TableCell>
               <TableCell>{getSourceTypeBadge(source.sourceType)}</TableCell>
               <TableCell>

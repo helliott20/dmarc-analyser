@@ -8,6 +8,13 @@
       "when": 1766483289564,
       "tag": "0000_brown_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772984457528,
+      "tag": "0001_nostalgic_firelord",
+      "breakpoints": true
     }
   ]
 }
