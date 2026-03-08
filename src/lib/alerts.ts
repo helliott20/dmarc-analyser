@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/db';
-import { alerts, alertRules, orgMembers, users, domains, organizations } from '@/db/schema';
+import { alerts, alertRules, orgMembers, users, userPreferences, domains, organizations } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sendAlertEmail } from './email-service';
 
@@ -85,25 +85,47 @@ export async function createAlert(params: CreateAlertParams): Promise<{ alertId:
     domainName = domain?.domain;
   }
 
-  // Get org members who should receive alert emails
-  // For now, notify all admins and owners
+  // Get org members with their notification preferences
   const membersToNotify = await db
     .select({
       email: users.email,
       name: users.name,
+      userId: users.id,
+      emailAlertNotifications: userPreferences.emailAlertNotifications,
+      emailAlertSeverity: userPreferences.emailAlertSeverity,
+      emailQuietHoursStart: userPreferences.emailQuietHoursStart,
+      emailQuietHoursEnd: userPreferences.emailQuietHoursEnd,
     })
     .from(orgMembers)
     .innerJoin(users, eq(orgMembers.userId, users.id))
-    .where(
-      and(
-        eq(orgMembers.organizationId, organizationId),
-        // Only notify owners and admins
-        // Could be enhanced to check user preferences
-      )
-    );
+    .leftJoin(userPreferences, eq(users.id, userPreferences.userId))
+    .where(eq(orgMembers.organizationId, organizationId));
 
-  const adminMembers = membersToNotify.filter((m) => m.email);
-  const recipientEmails = adminMembers.map((m) => m.email).filter(Boolean) as string[];
+  const currentHour = new Date().getUTCHours();
+
+  const recipientEmails = membersToNotify
+    .filter((m) => {
+      if (!m.email) return false;
+      // Check if user has alert notifications enabled (default true if no prefs)
+      if (m.emailAlertNotifications === false) return false;
+      // Check severity filter (default to warning,critical if no prefs)
+      const allowedSeverities = (m.emailAlertSeverity || 'warning,critical').split(',');
+      if (!allowedSeverities.includes(severity)) return false;
+      // Check quiet hours (skip for critical alerts)
+      if (severity !== 'critical' && m.emailQuietHoursStart !== null && m.emailQuietHoursEnd !== null) {
+        const start = m.emailQuietHoursStart;
+        const end = m.emailQuietHoursEnd;
+        if (start <= end) {
+          // Same-day range (e.g. 9 to 17)
+          if (currentHour >= start && currentHour < end) return false;
+        } else {
+          // Overnight range (e.g. 22 to 7)
+          if (currentHour >= start || currentHour < end) return false;
+        }
+      }
+      return true;
+    })
+    .map((m) => m.email) as string[];
 
   if (recipientEmails.length === 0) {
     return { alertId: alert.id, emailSent: false };

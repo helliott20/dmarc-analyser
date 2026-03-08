@@ -361,10 +361,12 @@ export interface ReportEmailOptions {
     newSources: number;
   };
   reportUrl: string;
+  topSources?: Array<{ ip: string; org: string; count: number; passRate: number }>;
+  topFailures?: Array<{ ip: string; org: string; count: number }>;
 }
 
 export function generateReportEmail(options: ReportEmailOptions): { html: string; text: string; subject: string } {
-  const { org, reportName, periodStart, periodEnd, domainName, summary, reportUrl } = options;
+  const { org, reportName, periodStart, periodEnd, domainName, summary, reportUrl, topSources, topFailures } = options;
   const primaryColor = org.primaryColor || '#3B82F6';
   const accentColor = org.accentColor || '#10B981';
 
@@ -430,12 +432,77 @@ export function generateReportEmail(options: ReportEmailOptions): { html: string
       </tr>
     </table>
 
+    ${topSources && topSources.length > 0 ? `
+    <!-- Top Sources -->
+    <p style="margin: 24px 0 12px; font-size: 14px; font-weight: 600; color: #18181b;">Top Sending Sources</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border-radius: 8px; margin-bottom: 16px;">
+      <thead>
+        <tr>
+          <th style="padding: 10px 12px; text-align: left; font-size: 11px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #e4e4e7;">Source</th>
+          <th style="padding: 10px 12px; text-align: right; font-size: 11px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #e4e4e7;">Messages</th>
+          <th style="padding: 10px 12px; text-align: right; font-size: 11px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #e4e4e7;">Pass Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topSources.map(s => `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e4e4e7;">
+            <span style="font-size: 13px; color: #18181b;">${s.ip}</span>
+            ${s.org ? `<br><span style="font-size: 11px; color: #71717a;">${s.org}</span>` : ''}
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e4e4e7; text-align: right; font-size: 13px; color: #18181b;">${s.count.toLocaleString()}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #e4e4e7; text-align: right; font-size: 13px; color: ${s.passRate >= 95 ? '#10b981' : s.passRate >= 80 ? '#f59e0b' : '#ef4444'};">${s.passRate}%</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+
+    ${topFailures && topFailures.length > 0 ? `
+    <!-- Top Failures -->
+    <p style="margin: 24px 0 12px; font-size: 14px; font-weight: 600; color: #18181b;">Top Failing Sources</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border-radius: 8px; margin-bottom: 16px;">
+      <thead>
+        <tr>
+          <th style="padding: 10px 12px; text-align: left; font-size: 11px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #fecaca;">Source</th>
+          <th style="padding: 10px 12px; text-align: right; font-size: 11px; color: #71717a; text-transform: uppercase; border-bottom: 2px solid #fecaca;">Failed Messages</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${topFailures.map(f => `
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #fecaca;">
+            <span style="font-size: 13px; color: #18181b;">${f.ip}</span>
+            ${f.org ? `<br><span style="font-size: 11px; color: #71717a;">${f.org}</span>` : ''}
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #fecaca; text-align: right; font-size: 13px; color: #ef4444;">${f.count.toLocaleString()}</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    ` : ''}
+
     <p style="margin: 0 0 8px; font-size: 14px; color: #52525b; line-height: 1.6;">
       View the full report for detailed breakdowns, source analysis, and recommendations.
     </p>
 
     ${getButton('View Full Report', reportUrl, primaryColor)}
   `;
+
+  // Build text version
+  let topSourcesText = '';
+  if (topSources && topSources.length > 0) {
+    topSourcesText = '\nTop Sending Sources:\n' + topSources.map(s =>
+      `- ${s.ip}${s.org ? ` (${s.org})` : ''}: ${s.count.toLocaleString()} messages, ${s.passRate}% pass rate`
+    ).join('\n');
+  }
+
+  let topFailuresText = '';
+  if (topFailures && topFailures.length > 0) {
+    topFailuresText = '\nTop Failing Sources:\n' + topFailures.map(f =>
+      `- ${f.ip}${f.org ? ` (${f.org})` : ''}: ${f.count.toLocaleString()} failed messages`
+    ).join('\n');
+  }
 
   const text = `
 ${reportName}
@@ -446,6 +513,7 @@ Summary:
 - Pass Rate: ${summary.passRate.toFixed(1)}%
 - Failed Messages: ${summary.failedMessages.toLocaleString()}
 - New Sources: ${summary.newSources}
+${topSourcesText}${topFailuresText}
 
 View the full report:
 ${reportUrl}

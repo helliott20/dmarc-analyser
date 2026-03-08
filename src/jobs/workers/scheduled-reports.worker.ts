@@ -14,6 +14,21 @@ interface ReportSummary {
   passRate: number;
   failedMessages: number;
   newSources: number;
+  domainIds: string[];
+  reportIdList: string[];
+}
+
+export interface TopSource {
+  ip: string;
+  org: string;
+  count: number;
+  passRate: number;
+}
+
+export interface TopFailure {
+  ip: string;
+  org: string;
+  count: number;
 }
 
 async function calculateReportSummary(
@@ -43,7 +58,7 @@ async function calculateReportSummary(
   }
 
   if (domainIds.length === 0) {
-    return { totalMessages: 0, passRate: 0, failedMessages: 0, newSources: 0, domainName };
+    return { totalMessages: 0, passRate: 0, failedMessages: 0, newSources: 0, domainName, domainIds, reportIdList: [] };
   }
 
   // Get reports in the period
@@ -59,7 +74,7 @@ async function calculateReportSummary(
     );
 
   if (reportIds.length === 0) {
-    return { totalMessages: 0, passRate: 100, failedMessages: 0, newSources: 0, domainName };
+    return { totalMessages: 0, passRate: 100, failedMessages: 0, newSources: 0, domainName, domainIds, reportIdList: [] };
   }
 
   const reportIdList = reportIds.map((r) => r.id);
@@ -102,12 +117,104 @@ async function calculateReportSummary(
     failedMessages: failed,
     newSources,
     domainName,
+    domainIds,
+    reportIdList,
   };
+}
+
+async function getTopSources(
+  domainIds: string[],
+  reportIdList: string[]
+): Promise<TopSource[]> {
+  if (reportIdList.length === 0 || domainIds.length === 0) return [];
+
+  const topSources = await db
+    .select({
+      ip: records.sourceIp,
+      total: sum(records.count),
+      passed: sql<number>`SUM(CASE WHEN ${records.dmarcDkim} = 'pass' OR ${records.dmarcSpf} = 'pass' THEN ${records.count} ELSE 0 END)`,
+    })
+    .from(records)
+    .where(inArray(records.reportId, reportIdList))
+    .groupBy(records.sourceIp)
+    .orderBy(desc(sum(records.count)))
+    .limit(5);
+
+  // Enrich with org name from sources table
+  const result: TopSource[] = [];
+  for (const row of topSources) {
+    const totalCount = Number(row.total) || 0;
+    const passedCount = Number(row.passed) || 0;
+    const passRate = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
+
+    let orgName = '';
+    if (row.ip) {
+      const [source] = await db
+        .select({ organization: sources.organization })
+        .from(sources)
+        .where(and(inArray(sources.domainId, domainIds), eq(sources.sourceIp, row.ip)))
+        .limit(1);
+      orgName = source?.organization || '';
+    }
+
+    result.push({
+      ip: row.ip || '',
+      org: orgName,
+      count: totalCount,
+      passRate,
+    });
+  }
+
+  return result;
+}
+
+async function getTopFailures(
+  domainIds: string[],
+  reportIdList: string[]
+): Promise<TopFailure[]> {
+  if (reportIdList.length === 0 || domainIds.length === 0) return [];
+
+  const topFailures = await db
+    .select({
+      ip: records.sourceIp,
+      failedCount: sql<number>`SUM(CASE WHEN ${records.dmarcDkim} != 'pass' AND ${records.dmarcSpf} != 'pass' THEN ${records.count} ELSE 0 END)`,
+    })
+    .from(records)
+    .where(inArray(records.reportId, reportIdList))
+    .groupBy(records.sourceIp)
+    .having(sql`SUM(CASE WHEN ${records.dmarcDkim} != 'pass' AND ${records.dmarcSpf} != 'pass' THEN ${records.count} ELSE 0 END) > 0`)
+    .orderBy(desc(sql`SUM(CASE WHEN ${records.dmarcDkim} != 'pass' AND ${records.dmarcSpf} != 'pass' THEN ${records.count} ELSE 0 END)`))
+    .limit(5);
+
+  const result: TopFailure[] = [];
+  for (const row of topFailures) {
+    let orgName = '';
+    if (row.ip) {
+      const [source] = await db
+        .select({ organization: sources.organization })
+        .from(sources)
+        .where(and(inArray(sources.domainId, domainIds), eq(sources.sourceIp, row.ip)))
+        .limit(1);
+      orgName = source?.organization || '';
+    }
+
+    result.push({
+      ip: row.ip || '',
+      org: orgName,
+      count: Number(row.failedCount) || 0,
+    });
+  }
+
+  return result;
 }
 
 function getPeriodDates(frequency: string, now: Date): { start: Date; end: Date } {
   const end = new Date(now);
   end.setHours(0, 0, 0, 0);
+  // Shift end back by 1 day to allow delayed DMARC reports to arrive.
+  // Reporting orgs can delay sending aggregate reports by hours/days,
+  // and Gmail sync runs every 15 minutes, so recent data may be incomplete.
+  end.setDate(end.getDate() - 1);
 
   const start = new Date(end);
 
@@ -170,6 +277,18 @@ async function processScheduledReport(job: Job<ScheduledReportJobData>): Promise
       end
     );
 
+    // Fetch optional top sources and failures based on report config
+    let topSources: TopSource[] | undefined;
+    let topFailures: TopFailure[] | undefined;
+
+    if (report.includeSources && summary.domainIds.length > 0 && summary.reportIdList.length > 0) {
+      topSources = await getTopSources(summary.domainIds, summary.reportIdList);
+    }
+
+    if (report.includeFailures && summary.domainIds.length > 0 && summary.reportIdList.length > 0) {
+      topFailures = await getTopFailures(summary.domainIds, summary.reportIdList);
+    }
+
     // Send the email
     const result = await sendScheduledReportEmail({
       organizationId,
@@ -185,6 +304,8 @@ async function processScheduledReport(job: Job<ScheduledReportJobData>): Promise
         failedMessages: summary.failedMessages,
         newSources: summary.newSources,
       },
+      topSources,
+      topFailures,
     });
 
     if (!result.success) {
