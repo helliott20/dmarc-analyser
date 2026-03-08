@@ -88,6 +88,12 @@ export const userPreferences = pgTable('user_preferences', {
   emailWeeklyDigest: boolean('email_weekly_digest').default(true).notNull(),
   emailAlertNotifications: boolean('email_alert_notifications').default(true).notNull(),
 
+  // Enhanced notification preferences
+  emailAlertSeverity: varchar('email_alert_severity', { length: 50 }).default('warning,critical').notNull(), // comma-separated: info,warning,critical
+  emailDigestFrequency: varchar('email_digest_frequency', { length: 20 }).default('weekly').notNull(), // daily, weekly, monthly, never
+  emailQuietHoursStart: integer('email_quiet_hours_start'), // 0-23, null = no quiet hours
+  emailQuietHoursEnd: integer('email_quiet_hours_end'), // 0-23
+
   // Appearance preferences
   theme: varchar('theme', { length: 20 }).default('system').notNull(), // 'light', 'dark', 'system'
 

@@ -234,8 +234,10 @@ export async function sendScheduledReportEmail(params: {
     failedMessages: number;
     newSources: number;
   };
+  topSources?: Array<{ ip: string; org: string; count: number; passRate: number }>;
+  topFailures?: Array<{ ip: string; org: string; count: number }>;
 }): Promise<{ success: boolean; error?: string }> {
-  const { organizationId, recipients, reportName, periodStart, periodEnd, domainName, domainId, summary } = params;
+  const { organizationId, recipients, reportName, periodStart, periodEnd, domainName, domainId, summary, topSources, topFailures } = params;
 
   // Get org branding and slug
   const [orgData] = await db
@@ -268,6 +270,8 @@ export async function sendScheduledReportEmail(params: {
     domainName,
     summary,
     reportUrl,
+    topSources,
+    topFailures,
   });
 
   return sendOrgEmail(organizationId, recipients, subject, html, text);

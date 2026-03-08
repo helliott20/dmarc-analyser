@@ -20,6 +20,8 @@ async function getUserPreferences(userId: string) {
         emailLoginAlerts: true,
         emailWeeklyDigest: true,
         emailAlertNotifications: true,
+        emailAlertSeverity: 'warning,critical',
+        emailDigestFrequency: 'weekly',
         theme: 'system',
       })
       .returning();

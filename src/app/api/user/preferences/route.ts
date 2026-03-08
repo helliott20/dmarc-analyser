@@ -9,6 +9,10 @@ const preferencesUpdateSchema = z.object({
   emailLoginAlerts: z.boolean().optional(),
   emailWeeklyDigest: z.boolean().optional(),
   emailAlertNotifications: z.boolean().optional(),
+  emailAlertSeverity: z.string().regex(/^(info|warning|critical)(,(info|warning|critical))*$/).optional(),
+  emailDigestFrequency: z.enum(['daily', 'weekly', 'monthly', 'never']).optional(),
+  emailQuietHoursStart: z.number().int().min(0).max(23).nullable().optional(),
+  emailQuietHoursEnd: z.number().int().min(0).max(23).nullable().optional(),
   theme: z.enum(['light', 'dark', 'system']).optional(),
 });
 
@@ -36,6 +40,10 @@ export async function PATCH(request: NextRequest) {
         emailLoginAlerts: validatedData.emailLoginAlerts ?? true,
         emailWeeklyDigest: validatedData.emailWeeklyDigest ?? true,
         emailAlertNotifications: validatedData.emailAlertNotifications ?? true,
+        emailAlertSeverity: validatedData.emailAlertSeverity ?? 'warning,critical',
+        emailDigestFrequency: validatedData.emailDigestFrequency ?? 'weekly',
+        emailQuietHoursStart: validatedData.emailQuietHoursStart ?? null,
+        emailQuietHoursEnd: validatedData.emailQuietHoursEnd ?? null,
         theme: validatedData.theme ?? 'system',
       });
     } else {
