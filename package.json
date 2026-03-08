@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:https": "next dev --experimental-https",
+    "dev": "tsx src/db/migrate.ts && next dev",
+    "dev:https": "tsx src/db/migrate.ts && next dev --experimental-https",
     "build": "next build",
-    "start": "next start",
+    "start": "tsx src/db/migrate.ts && next start",
     "lint": "eslint",
     "workers": "tsx src/jobs/workers/index.ts",
     "workers:dev": "tsx watch src/jobs/workers/index.ts",
