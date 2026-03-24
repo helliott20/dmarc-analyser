@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Info, Zap } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { JobsStatusDisplay } from '@/components/jobs/jobs-status-display';
 
 interface PageProps {
@@ -105,15 +105,9 @@ export default async function JobsStatusPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/30 dark:border-blue-900">
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              Worker Required
-            </p>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              Background jobs require the worker container to be running. If jobs are
-              not processing, check that the worker is healthy.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Background jobs require the worker process (<code>npm run workers</code>) to be running.
+          </p>
         </CardContent>
       </Card>
 

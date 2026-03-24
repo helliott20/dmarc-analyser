@@ -167,6 +167,14 @@ async function runMigrations() {
   } finally {
     await migrationClient.end();
   }
+
+  // Auto-seed global known senders (safe to run repeatedly - uses onConflictDoNothing)
+  try {
+    const { seedKnownSenders } = await import('./seeds/known-senders');
+    await seedKnownSenders();
+  } catch (error) {
+    console.log('[Migrations] Known senders seed skipped:', error);
+  }
 }
 
 runMigrations();

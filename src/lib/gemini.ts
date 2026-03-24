@@ -196,6 +196,36 @@ export async function getCachedRecommendation(
 }
 
 /**
+ * Get the most recent recommendation for a domain, even if expired or hash mismatched.
+ * Used as a fallback so the UI always shows the last result.
+ */
+export async function getLatestRecommendation(
+  domainId: string
+): Promise<(CachedAiRecommendation & { stale: boolean }) | null> {
+  const now = new Date();
+
+  const [cached] = await db
+    .select()
+    .from(aiRecommendationsCache)
+    .where(eq(aiRecommendationsCache.domainId, domainId));
+
+  if (!cached) {
+    return null;
+  }
+
+  const recommendation = cached.recommendation as AiRecommendation;
+  const isExpired = cached.expiresAt < now;
+
+  return {
+    ...recommendation,
+    cached: true,
+    stale: isExpired,
+    generatedAt: cached.generatedAt.toISOString(),
+    expiresAt: cached.expiresAt.toISOString(),
+  };
+}
+
+/**
  * Save recommendation to cache
  */
 export async function cacheRecommendation(

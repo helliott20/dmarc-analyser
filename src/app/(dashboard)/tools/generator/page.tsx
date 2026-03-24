@@ -625,23 +625,29 @@ export default function DMARCGeneratorPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Step Indicators */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center w-full">
                 {STEPS.map((step, idx) => (
-                  <div key={step.id} className="flex items-center">
-                    <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium ${
+                  <div key={step.id} className={`flex items-center ${idx < STEPS.length - 1 ? 'flex-1' : ''}`}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(step.id)}
+                      className={`flex items-center justify-center w-8 h-8 shrink-0 rounded-full border-2 text-sm font-medium transition-colors ${
                         step.id === currentStep
                           ? 'border-primary bg-primary text-primary-foreground'
                           : step.id < currentStep
-                          ? 'border-primary bg-primary/10 text-primary'
+                          ? 'border-primary bg-primary/10 text-primary cursor-pointer hover:bg-primary/20'
                           : 'border-muted-foreground/20 text-muted-foreground'
                       }`}
                     >
-                      {step.id}
-                    </div>
+                      {step.id < currentStep ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        step.id
+                      )}
+                    </button>
                     {idx < STEPS.length - 1 && (
                       <div
-                        className={`w-8 h-0.5 mx-1 ${
+                        className={`h-0.5 flex-1 mx-1.5 transition-colors ${
                           step.id < currentStep ? 'bg-primary' : 'bg-muted-foreground/20'
                         }`}
                       />

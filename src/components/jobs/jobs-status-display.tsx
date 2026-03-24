@@ -76,6 +76,7 @@ interface HealthStatus {
   totalWaiting: number;
   totalCompleted: number;
   totalFailed: number;
+  workerConnected?: boolean;
 }
 
 interface JobsData {
@@ -244,7 +245,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
     switch (status) {
       case 'active':
         return (
-          <Badge variant="default" className="bg-blue-500">
+          <Badge variant="default" className="bg-info">
             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
             Active
           </Badge>
@@ -258,7 +259,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
         );
       case 'warning':
         return (
-          <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+          <Badge variant="outline" className="border-warning text-warning">
             <AlertTriangle className="h-3 w-3 mr-1" />
             Warning
           </Badge>
@@ -272,7 +273,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
         );
       default:
         return (
-          <Badge variant="outline" className="border-green-500 text-green-600">
+          <Badge variant="outline" className="border-success text-success">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Healthy
           </Badge>
@@ -316,26 +317,26 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
     switch (data.health?.status) {
       case 'healthy':
         return {
-          className: 'border-green-500 bg-green-50 dark:bg-green-950/30',
-          icon: <ShieldCheck className="h-4 w-4 text-green-600" />,
-          titleClass: 'text-green-800 dark:text-green-200',
-          descClass: 'text-green-700 dark:text-green-300',
+          className: 'border-success bg-success/10',
+          icon: <ShieldCheck className="h-4 w-4 text-success" />,
+          titleClass: 'text-success',
+          descClass: 'text-success',
           title: 'All Systems Operational',
         };
       case 'degraded':
         return {
-          className: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30',
-          icon: <AlertTriangle className="h-4 w-4 text-yellow-600" />,
-          titleClass: 'text-yellow-800 dark:text-yellow-200',
-          descClass: 'text-yellow-700 dark:text-yellow-300',
+          className: 'border-warning bg-warning/10',
+          icon: <AlertTriangle className="h-4 w-4 text-warning" />,
+          titleClass: 'text-warning',
+          descClass: 'text-warning',
           title: 'System Degraded',
         };
       case 'critical':
         return {
-          className: 'border-red-500 bg-red-50 dark:bg-red-950/30',
-          icon: <ShieldAlert className="h-4 w-4 text-red-600" />,
-          titleClass: 'text-red-800 dark:text-red-200',
-          descClass: 'text-red-700 dark:text-red-300',
+          className: 'border-destructive bg-destructive/10',
+          icon: <ShieldAlert className="h-4 w-4 text-destructive" />,
+          titleClass: 'text-destructive',
+          descClass: 'text-destructive',
           title: 'System Critical',
         };
       default:
@@ -368,12 +369,26 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
           </AlertDescription>
         </Alert>
       )}
+      {/* Worker Status */}
+      {data.health && data.health.workerConnected === false && (
+        <Alert className="border-warning bg-warning/10">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-warning">
+            Worker Not Detected
+          </AlertTitle>
+          <AlertDescription className="text-warning">
+            No background jobs have completed recently. Ensure the worker process is running
+            (<code className="text-xs bg-warning/15 px-1 rounded">npm run workers</code>).
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-blue-500" />
+              <Zap className="h-4 w-4 text-info" />
               <span className="text-sm text-muted-foreground">Active Jobs</span>
             </div>
             <p className="text-2xl font-bold mt-1">
@@ -384,7 +399,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-500" />
+              <Clock className="h-4 w-4 text-warning" />
               <span className="text-sm text-muted-foreground">Waiting</span>
             </div>
             <p className="text-2xl font-bold mt-1">
@@ -395,7 +410,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4 text-destructive" />
               <span className="text-sm text-muted-foreground">Failed</span>
             </div>
             <p className="text-2xl font-bold mt-1">
@@ -458,7 +473,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
                   <TableCell>{getStatusBadge(getQueueHealthStatus(queue))}</TableCell>
                   <TableCell className="text-right">{queue.active}</TableCell>
                   <TableCell className="text-right">
-                    <span className={queue.failed > 0 ? 'text-red-500 font-medium' : ''}>
+                    <span className={queue.failed > 0 ? 'text-destructive font-medium' : ''}>
                       {queue.failed}
                     </span>
                   </TableCell>
@@ -483,7 +498,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
             size="sm"
             onClick={handleClearGmailSync}
             disabled={isClearing}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             {isClearing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -512,7 +527,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
                   <TableCell className="text-right">{queue.active}</TableCell>
                   <TableCell className="text-right">{queue.waiting}</TableCell>
                   <TableCell className="text-right">
-                    <span className={queue.failed > 0 ? 'text-red-500 font-medium' : ''}>
+                    <span className={queue.failed > 0 ? 'text-destructive font-medium' : ''}>
                       {queue.failed}
                     </span>
                   </TableCell>
@@ -538,9 +553,9 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
         allFailedJobs.sort((a, b) => b.timestamp - a.timestamp);
 
         return (
-          <Card className="border-red-200 dark:border-red-900">
+          <Card className="border-destructive">
             <CardHeader>
-              <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
+              <CardTitle className="text-destructive flex items-center gap-2">
                 <XCircle className="h-5 w-5" />
                 Recent Failed Jobs
               </CardTitle>
@@ -567,7 +582,7 @@ export function JobsStatusDisplay({ orgSlug }: JobsStatusDisplayProps) {
                         {job.name.length > 30 ? job.name.substring(0, 30) + '...' : job.name}
                       </TableCell>
                       <TableCell className="max-w-md">
-                        <span className="text-red-600 dark:text-red-400 text-sm">
+                        <span className="text-destructive text-sm">
                           {truncateError(job.failedReason)}
                         </span>
                       </TableCell>

@@ -141,6 +141,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       { queue: queues.ipEnrichment, displayName: 'IP Enrichment' },
       { queue: queues.dataExport, displayName: 'Data Export' },
       { queue: queues.cleanup, displayName: 'Cleanup' },
+      { queue: queues.spfRefresh, displayName: 'SPF Refresh' },
     ];
 
     const queuesStatus = await Promise.all(
@@ -173,6 +174,16 @@ export async function GET(request: Request, { params }: RouteParams) {
       healthStatus = 'degraded';
       healthMessage = `${totalFailed} failed job${totalFailed > 1 ? 's' : ''} - may retry automatically`;
     }
+
+    // Detect if the worker process is actually running
+    // Check if any recurring queue has completed a job within the last 30 minutes
+    const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
+    const recurringQueues = queuesStatus.filter(q => q.repeatableJobs.length > 0);
+    const hasRecentCompletion = recurringQueues.some(
+      q => q.lastCompletedJob && q.lastCompletedJob.timestamp > thirtyMinutesAgo
+    );
+    const hasActiveJobs = queuesStatus.some(q => q.active > 0);
+    const workerConnected = hasRecentCompletion || hasActiveJobs || totalCompleted > 0;
 
     // Get Gmail sync progress from database
     const gmailAccountsData = await db
@@ -219,6 +230,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         totalWaiting,
         totalCompleted,
         totalFailed,
+        workerConnected,
       },
       gmailSync: gmailSyncStatus,
       timestamp: new Date().toISOString(),
