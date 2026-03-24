@@ -15,6 +15,7 @@ export const QUEUE_NAMES = {
   DATA_EXPORT: 'data-export',
   CLEANUP: 'cleanup',
   BILLING: 'billing',
+  SPF_REFRESH: 'spf-refresh',
 } as const;
 
 // Gmail sync queue - fetch DMARC emails (BYOC mode)
@@ -155,6 +156,16 @@ export const cleanupQueue = new Queue(QUEUE_NAMES.CLEANUP, {
   },
 });
 
+// SPF refresh queue - re-resolve SPF includes for known senders
+export const spfRefreshQueue = new Queue(QUEUE_NAMES.SPF_REFRESH, {
+  ...connectionOptions,
+  defaultJobOptions: {
+    attempts: 2,
+    removeOnComplete: { count: 30 },
+    removeOnFail: { count: 50 },
+  },
+});
+
 // Billing queue - usage reporting and trial management (SaaS mode only)
 export const billingQueue = new Queue(QUEUE_NAMES.BILLING, {
   ...connectionOptions,
@@ -183,4 +194,5 @@ export const queues = {
   dataExport: dataExportQueue,
   cleanup: cleanupQueue,
   billing: billingQueue,
+  spfRefresh: spfRefreshQueue,
 };

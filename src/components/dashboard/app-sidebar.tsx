@@ -108,7 +108,7 @@ export function AppSidebar({
     <Sidebar>
       <SidebarHeader className="border-b px-4 py-3 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20 dark:to-transparent">
         <Link href="/orgs" className="flex items-center gap-2.5 group">
-          <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/50 group-hover:bg-blue-200 dark:group-hover:bg-blue-900 transition-colors">
+          <div className="p-1.5 rounded-lg bg-info/15 group-hover:bg-info/20 transition-colors">
             <img
               src={currentOrg?.logoUrl || '/dmarc-analyser-logo.png'}
               alt={currentOrg?.name || 'DMARC Analyser'}

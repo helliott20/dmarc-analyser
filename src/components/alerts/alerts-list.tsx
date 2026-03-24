@@ -98,9 +98,9 @@ const ALERT_TYPE_LABELS = {
 };
 
 const SEVERITY_COLORS = {
-  info: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
-  warning: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
-  critical: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+  info: 'bg-info/15 text-info border-info',
+  warning: 'bg-warning/15 text-warning border-warning',
+  critical: 'bg-destructive/15 text-destructive border-destructive',
 };
 
 interface GroupedAlerts {
@@ -144,12 +144,18 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
     fetchAlerts();
   }, [orgSlug, typeFilter, severityFilter, readFilter, dismissedFilter]);
 
+  // Notify sidebar badge to re-fetch
+  const notifyBadge = () => {
+    window.dispatchEvent(new CustomEvent('alert-count-changed'));
+  };
+
   // Optimistic update: mark as read locally, then sync with server
   const markAsRead = async (alertId: string) => {
     // Optimistically update UI
     setAlerts((prev) =>
       prev.map((a) => (a.id === alertId ? { ...a, isRead: true } : a))
     );
+    notifyBadge();
 
     try {
       await fetch(`/api/orgs/${orgSlug}/alerts/${alertId}`, {
@@ -163,6 +169,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
       setAlerts((prev) =>
         prev.map((a) => (a.id === alertId ? { ...a, isRead: false } : a))
       );
+      notifyBadge();
     }
   };
 
@@ -173,6 +180,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
 
     // Optimistically remove from UI
     setAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    notifyBadge();
 
     try {
       const response = await fetch(`/api/orgs/${orgSlug}/alerts/${alertId}/dismiss`, {
@@ -187,6 +195,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
       // Restore the alert on error
       if (alertToRestore) {
         setAlerts((prev) => [...prev, alertToRestore]);
+        notifyBadge();
       }
     }
   };
@@ -202,6 +211,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
         return matches ? { ...a, isRead: true } : a;
       })
     );
+    notifyBadge();
 
     try {
       await fetch(`/api/orgs/${orgSlug}/alerts/mark-read`, {
@@ -212,6 +222,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
     } catch (error) {
       console.error('Failed to mark alerts as read:', error);
       fetchAlerts(); // Refetch on error
+      notifyBadge();
     }
   };
 
@@ -228,6 +239,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
       if (response.ok) {
         // Remove deleted alerts from UI
         setAlerts((prev) => prev.filter((a) => a.type !== type));
+        notifyBadge();
       }
       return data;
     } catch (error) {
@@ -275,11 +287,11 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return <XCircle className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+        return <AlertTriangle className="h-5 w-5 text-warning" />;
       case 'info':
-        return <Info className="h-5 w-5 text-blue-600" />;
+        return <Info className="h-5 w-5 text-info" />;
       default:
         return <Bell className="h-5 w-5" />;
     }
@@ -370,11 +382,11 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
 
       {/* Bulk Actions */}
       {newSourceAlertCount > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
+        <Card className="border-warning bg-warning/10">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-yellow-600" />
+                <Mail className="h-5 w-5 text-warning" />
                 <span className="text-sm">
                   <strong>{newSourceAlertCount.toLocaleString()}</strong> new source alert{newSourceAlertCount !== 1 ? 's' : ''} found
                 </span>
@@ -384,7 +396,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-yellow-300 hover:bg-yellow-100 dark:border-yellow-800 dark:hover:bg-yellow-900/30"
+                    className="border-warning hover:bg-warning/15"
                     disabled={deleting}
                   >
                     {deleting ? (
@@ -407,7 +419,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => bulkDeleteAlerts('new_source')}
-                      className="bg-red-600 hover:bg-red-700"
+                      className="bg-destructive hover:bg-destructive/80"
                     >
                       Delete all
                     </AlertDialogAction>
@@ -430,7 +442,7 @@ export function AlertsList({ orgSlug, filters = {} }: AlertsListProps) {
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
-              <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
+              <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">All clear!</h3>
               <p className="text-muted-foreground">
                 No alerts match your current filters.

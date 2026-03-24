@@ -122,12 +122,12 @@ export function DiscoverDomainsCard({ orgSlug }: DiscoverDomainsCardProps) {
   // Show scan button if not scanned yet
   if (!hasScanned) {
     return (
-      <Card className="border-dashed border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
+      <Card className="border-dashed border-info bg-info/10">
         <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-                <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-info/15">
+                <Sparkles className="h-4 w-4 text-info" />
               </div>
               <div>
                 <p className="font-medium text-sm">Discover domains from DMARC reports</p>
@@ -162,11 +162,11 @@ export function DiscoverDomainsCard({ orgSlug }: DiscoverDomainsCardProps) {
 
   // Show suggestions
   return (
-    <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+    <Card className="border-success bg-success/10">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            <Globe className="h-4 w-4 text-green-600" />
+            <Globe className="h-4 w-4 text-success" />
             {suggestions.length} domain{suggestions.length !== 1 ? 's' : ''} found in DMARC reports
           </CardTitle>
           <div className="flex items-center gap-2">

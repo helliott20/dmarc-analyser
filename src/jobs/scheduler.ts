@@ -8,6 +8,7 @@ import {
   scheduledReportsQueue,
   cleanupQueue,
   billingQueue,
+  spfRefreshQueue,
 } from './queues';
 import type {
   GmailSyncJobData,
@@ -257,6 +258,18 @@ export async function setupRepeatableJobs() {
   );
   console.log('[Scheduler] Added Cleanup (daily at 2am)');
 
+  // SPF refresh - daily at 3am (re-resolve SPF includes for known senders)
+  await spfRefreshQueue.add(
+    'spf-refresh-scheduler',
+    { type: 'scheduled' },
+    {
+      repeat: {
+        pattern: '0 3 * * *', // Daily at 3am
+      },
+    }
+  );
+  console.log('[Scheduler] Added SPF refresh (daily at 3am)');
+
   // Billing jobs - only in SaaS mode
   if (isSaasMode()) {
     // Usage reporting - daily at 1am (before billing cycle typically ends)
@@ -298,6 +311,7 @@ export async function removeRepeatableJobs() {
     scheduledReportsQueue,
     cleanupQueue,
     billingQueue,
+    spfRefreshQueue,
   ];
 
   for (const queue of queuesWithRepeat) {

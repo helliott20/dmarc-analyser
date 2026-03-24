@@ -299,29 +299,29 @@ export default async function DomainPage({ params }: PageProps) {
 
       {/* Verification Lapsed Warning */}
       {isVerified && isVerificationLapsed && (
-        <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/20">
+        <Card className="border-warning/30 bg-warning/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
               <div className="flex-1">
-                <p className="font-medium text-orange-800 dark:text-orange-200">
+                <p className="font-medium text-warning">
                   Domain verification has lapsed
                 </p>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                <p className="text-sm text-warning/80 mt-1">
                   The verification DNS record for this domain could not be found. This may indicate
                   that the record was removed or domain ownership has changed. DMARC monitoring
                   continues but we recommend re-adding the verification record.
                 </p>
-                <div className="mt-3 p-3 bg-orange-100 dark:bg-orange-900/30 rounded-md">
-                  <p className="text-xs text-orange-700 dark:text-orange-300 font-medium mb-1">
+                <div className="mt-3 p-3 bg-warning/10 rounded-md">
+                  <p className="text-xs text-warning font-medium mb-1">
                     Add this TXT record to restore verification:
                   </p>
-                  <div className="text-xs font-mono text-orange-800 dark:text-orange-200">
-                    <p><span className="text-orange-600">Name:</span> _dmarc-verify.{domain.domain}</p>
-                    <p><span className="text-orange-600">Value:</span> {domain.verificationToken}</p>
+                  <div className="text-xs font-mono text-warning">
+                    <p><span className="text-warning">Name:</span> _dmarc-verify.{domain.domain}</p>
+                    <p><span className="text-warning">Value:</span> {domain.verificationToken}</p>
                   </div>
                 </div>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                <p className="text-xs text-warning/80 mt-2">
                   Lapsed on {new Date(domain.verificationLapsedAt!).toLocaleDateString('en-GB', {
                     day: 'numeric',
                     month: 'short',
@@ -336,15 +336,15 @@ export default async function DomainPage({ params }: PageProps) {
 
       {/* Data Hidden Warning (if not verified) */}
       {!isVerified && (
-        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
+        <Card className="border-warning/30 bg-warning/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
               <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium text-warning">
                   Report data is hidden until domain is verified
                 </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                <p className="text-sm text-warning/80 mt-1">
                   DMARC reports are being collected for this domain, but you need to verify
                   ownership before viewing the data. This ensures only domain owners can
                   access email authentication reports.

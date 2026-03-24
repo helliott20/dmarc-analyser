@@ -729,7 +729,7 @@ export function ScheduledReportsManager({
                       variant="ghost"
                       onClick={() => handleDeleteReport(report.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>

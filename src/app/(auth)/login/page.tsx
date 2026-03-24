@@ -117,14 +117,14 @@ function LoginForm() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex-1 flex flex-col min-h-screen bg-white dark:bg-slate-950">
+      <div className="flex-1 flex flex-col min-h-screen bg-background">
         {/* Mobile header */}
-        <div className="lg:hidden p-6 border-b border-gray-100 dark:border-slate-800">
+        <div className="lg:hidden p-6 border-b border-border">
           <Link href="https://dmarcanalyser.io" className="flex items-center gap-2">
             <div className="p-1.5 bg-blue-600 rounded-lg">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">DMARC Analyser</span>
+            <span className="text-lg font-semibold text-foreground">DMARC Analyser</span>
           </Link>
         </div>
 
@@ -133,7 +133,7 @@ function LoginForm() {
           <div className="w-full max-w-sm space-y-8">
             {/* Header */}
             <div className="space-y-2 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 Welcome back
               </h2>
               <p className="text-gray-500 dark:text-gray-400">
@@ -182,10 +182,10 @@ function LoginForm() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200 dark:border-slate-800" />
+                  <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white dark:bg-slate-950 px-3 text-gray-400 dark:text-gray-500">
+                  <span className="bg-background px-3 text-muted-foreground">
                     Secure authentication
                   </span>
                 </div>
@@ -233,7 +233,7 @@ function LoginForm() {
         </div>
 
         {/* Mobile footer with features */}
-        <div className="lg:hidden border-t border-gray-100 dark:border-slate-800 p-6 bg-gray-50 dark:bg-slate-900">
+        <div className="lg:hidden border-t border-border p-6 bg-muted">
           <div className="flex justify-around text-center">
             {features.map((feature) => (
               <div key={feature.title} className="space-y-1">
@@ -251,7 +251,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl animate-pulse">
             <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />

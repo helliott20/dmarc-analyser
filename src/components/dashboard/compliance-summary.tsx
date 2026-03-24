@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -190,15 +191,30 @@ export function ComplianceSummary({ orgSlug }: ComplianceSummaryProps) {
               <p className="text-xs text-muted-foreground">Passed</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10">
-            <XCircle className="h-5 w-5 text-destructive" />
-            <div>
-              <p className="text-lg font-bold tabular-nums text-destructive">
-                {summary.failedMessages.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Failed</p>
+          {summary.failedMessages > 0 ? (
+            <Link
+              href={`/orgs/${orgSlug}/domains?sort=passRate&dir=asc`}
+              className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 hover:bg-destructive/20 transition-colors cursor-pointer"
+            >
+              <XCircle className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-lg font-bold tabular-nums text-destructive">
+                  {summary.failedMessages.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Failed - View domains</p>
+              </div>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10">
+              <XCircle className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="text-lg font-bold tabular-nums text-destructive">
+                  {summary.failedMessages.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">Failed</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Total messages */}

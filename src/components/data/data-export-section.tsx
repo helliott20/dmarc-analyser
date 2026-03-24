@@ -177,11 +177,11 @@ export function DataExportSection({ orgSlug, organizationId, domains }: DataExpo
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'complete':
-        return <Badge className="bg-green-500">Complete</Badge>;
+        return <Badge className="bg-success">Complete</Badge>;
       case 'processing':
-        return <Badge className="bg-blue-500">Processing</Badge>;
+        return <Badge className="bg-info">Processing</Badge>;
       case 'failed':
-        return <Badge className="bg-red-500">Failed</Badge>;
+        return <Badge className="bg-destructive">Failed</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }

@@ -54,9 +54,9 @@ interface KnownSenderCardProps {
 
 const categoryColors: Record<string, string> = {
   marketing: 'bg-purple-100 text-purple-700',
-  transactional: 'bg-blue-100 text-blue-700',
-  corporate: 'bg-green-100 text-green-700',
-  security: 'bg-red-100 text-red-700',
+  transactional: 'bg-info/15 text-info',
+  corporate: 'bg-success/15 text-success',
+  security: 'bg-destructive/15 text-destructive',
   other: 'bg-gray-100 text-gray-700',
 };
 
@@ -145,7 +145,7 @@ export function KnownSenderCard({ sender, orgSlug, canManage }: KnownSenderCardP
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setDeleteOpen(true)}
-                    className="text-red-600"
+                    className="text-destructive"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
@@ -223,7 +223,7 @@ export function KnownSenderCard({ sender, orgSlug, canManage }: KnownSenderCardP
                 <AlertDialogAction
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-destructive hover:bg-destructive/80"
                 >
                   {deleting ? 'Deleting...' : 'Delete'}
                 </AlertDialogAction>

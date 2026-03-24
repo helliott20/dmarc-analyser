@@ -290,7 +290,7 @@ export function KnownSenderDialog({
               <div className="mt-2 p-3 rounded-md bg-muted text-sm">
                 {spfPreview.ipRanges.length > 0 ? (
                   <>
-                    <div className="flex items-center gap-2 text-green-600 mb-2">
+                    <div className="flex items-center gap-2 text-success mb-2">
                       <CheckCircle className="h-4 w-4" />
                       <span>Found {spfPreview.ipRanges.length} IP ranges</span>
                     </div>
@@ -308,7 +308,7 @@ export function KnownSenderDialog({
                     </Button>
                   </>
                 ) : (
-                  <div className="flex items-center gap-2 text-red-600">
+                  <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-4 w-4" />
                     <span>{spfPreview.errors[0] || 'No IP ranges found'}</span>
                   </div>

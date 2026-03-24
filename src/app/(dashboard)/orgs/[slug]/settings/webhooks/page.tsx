@@ -145,13 +145,13 @@ export default async function WebhookSettingsPage({ params }: PageProps) {
             </ul>
           </div>
 
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm font-semibold text-yellow-900 mb-1">
+          <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
+            <p className="text-sm font-semibold text-warning mb-1">
               Security Note for Custom Webhooks
             </p>
-            <p className="text-sm text-yellow-800">
+            <p className="text-sm text-warning">
               Custom webhooks include an HMAC signature in the{' '}
-              <code className="px-1 py-0.5 bg-yellow-100 rounded">X-Webhook-Signature</code>{' '}
+              <code className="px-1 py-0.5 bg-warning/15 rounded">X-Webhook-Signature</code>{' '}
               header. Verify this signature using your webhook secret to ensure the request
               is authentic.
             </p>

@@ -111,21 +111,21 @@ function getSourceTypeBadge(type: string) {
   switch (type) {
     case 'legitimate':
       return (
-        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        <Badge variant="secondary" className="bg-success/15 text-success">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Legitimate
         </Badge>
       );
     case 'suspicious':
       return (
-        <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <Badge variant="secondary" className="bg-destructive/15 text-destructive">
           <XCircle className="h-3 w-3 mr-1" />
           Suspicious
         </Badge>
       );
     case 'forwarded':
       return (
-        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+        <Badge variant="secondary" className="bg-info/15 text-info">
           Forwarded
         </Badge>
       );
@@ -406,7 +406,7 @@ export function SourceDetailSheet({
 
                 {/* Known Sender */}
                 {knownSender && (
-                  <div className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                  <div className="p-3 rounded-lg border bg-info/10 border-info">
                     <div className="flex items-center gap-3">
                       {knownSender.logoUrl && (
                         <img
@@ -416,7 +416,7 @@ export function SourceDetailSheet({
                         />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-blue-900 dark:text-blue-100">
+                        <p className="font-medium text-info">
                           {knownSender.name}
                         </p>
                         <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export function SourceDetailSheet({
                           href={knownSender.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                          className="text-info hover:underline"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </a>
@@ -465,14 +465,14 @@ export function SourceDetailSheet({
                     </p>
                     <p className="text-xs text-muted-foreground">Total</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                    <p className="text-2xl font-bold text-green-600">
+                  <div className="text-center p-3 rounded-lg bg-success/10">
+                    <p className="text-2xl font-bold text-success">
                       {source.passedMessages.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Passed</p>
                   </div>
-                  <div className="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
-                    <p className="text-2xl font-bold text-red-600">
+                  <div className="text-center p-3 rounded-lg bg-destructive/10">
+                    <p className="text-2xl font-bold text-destructive">
                       {source.failedMessages.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">Failed</p>
@@ -488,10 +488,10 @@ export function SourceDetailSheet({
                     <span
                       className={`text-lg font-bold ${
                         passRate >= 90
-                          ? 'text-green-600'
+                          ? 'text-success'
                           : passRate >= 70
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
+                          ? 'text-warning'
+                          : 'text-destructive'
                       }`}
                     >
                       {passRate}%
@@ -501,10 +501,10 @@ export function SourceDetailSheet({
                     <div
                       className={`h-full transition-all ${
                         passRate >= 90
-                          ? 'bg-green-500'
+                          ? 'bg-success'
                           : passRate >= 70
-                          ? 'bg-yellow-500'
-                          : 'bg-red-500'
+                          ? 'bg-warning'
+                          : 'bg-destructive'
                       }`}
                       style={{ width: `${passRate}%` }}
                     />
@@ -534,7 +534,7 @@ export function SourceDetailSheet({
                 >
                   Failures
                   {hasFailures && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
                   )}
                 </button>
                 <button
@@ -559,7 +559,7 @@ export function SourceDetailSheet({
                       <Button
                         size="sm"
                         variant={source.sourceType === 'legitimate' ? 'default' : 'outline'}
-                        className={source.sourceType === 'legitimate' ? 'bg-green-600 hover:bg-green-700' : ''}
+                        className={source.sourceType === 'legitimate' ? 'bg-success hover:bg-success/80' : ''}
                         onClick={() => handleClassify('legitimate')}
                         disabled={classifying}
                       >
@@ -569,7 +569,7 @@ export function SourceDetailSheet({
                       <Button
                         size="sm"
                         variant={source.sourceType === 'suspicious' ? 'default' : 'outline'}
-                        className={source.sourceType === 'suspicious' ? 'bg-red-600 hover:bg-red-700' : ''}
+                        className={source.sourceType === 'suspicious' ? 'bg-destructive hover:bg-destructive/80' : ''}
                         onClick={() => handleClassify('suspicious')}
                         disabled={classifying}
                       >
@@ -579,7 +579,7 @@ export function SourceDetailSheet({
                       <Button
                         size="sm"
                         variant={source.sourceType === 'forwarded' ? 'default' : 'outline'}
-                        className={source.sourceType === 'forwarded' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                        className={source.sourceType === 'forwarded' ? 'bg-info hover:bg-info/80' : ''}
                         onClick={() => handleClassify('forwarded')}
                         disabled={classifying}
                       >
@@ -645,28 +645,28 @@ export function SourceDetailSheet({
                     <>
                       <Separator />
                       <div
-                        className="p-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                        className="p-3 rounded-lg border border-destructive bg-destructive/10 cursor-pointer hover:bg-destructive/15 transition-colors"
                         onClick={() => setActiveTab('failures')}
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <ShieldAlert className="h-4 w-4 text-red-600" />
-                          <span className="font-medium text-red-800 dark:text-red-200 text-sm">
+                          <ShieldAlert className="h-4 w-4 text-destructive" />
+                          <span className="font-medium text-destructive text-sm">
                             Authentication failures detected
                           </span>
                         </div>
                         <div className="flex gap-4 text-xs">
                           {failureAnalysis.dkim.failed > 0 && (
-                            <span className="text-red-700 dark:text-red-300">
+                            <span className="text-destructive">
                               DKIM: {failureAnalysis.dkim.failed} failed
                             </span>
                           )}
                           {failureAnalysis.spf.failed > 0 && (
-                            <span className="text-red-700 dark:text-red-300">
+                            <span className="text-destructive">
                               SPF: {failureAnalysis.spf.failed} failed
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        <p className="text-xs text-destructive mt-1">
                           Tap to view failure details and remediation steps →
                         </p>
                       </div>
@@ -684,8 +684,8 @@ export function SourceDetailSheet({
                     if (steps.length === 0 && !hasFailures) {
                       return (
                         <div className="text-center py-8">
-                          <ShieldCheck className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                          <p className="font-medium text-green-700 dark:text-green-400">
+                          <ShieldCheck className="h-12 w-12 text-success mx-auto mb-3" />
+                          <p className="font-medium text-success">
                             All clear
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
@@ -699,7 +699,7 @@ export function SourceDetailSheet({
                         {steps.length > 0 && (
                           <div className="space-y-3">
                             <h3 className="font-semibold flex items-center gap-2 text-sm">
-                              <Lightbulb className="h-4 w-4 text-yellow-500" />
+                              <Lightbulb className="h-4 w-4 text-warning" />
                               Recommended Actions
                             </h3>
                             {steps.map((step, i) => (
@@ -707,20 +707,20 @@ export function SourceDetailSheet({
                                 key={i}
                                 className={`border-l-4 ${
                                   step.severity === 'critical'
-                                    ? 'border-l-red-500'
+                                    ? 'border-l-destructive'
                                     : step.severity === 'warning'
-                                    ? 'border-l-yellow-500'
-                                    : 'border-l-blue-500'
+                                    ? 'border-l-warning'
+                                    : 'border-l-info'
                                 }`}
                               >
                                 <CardContent className="p-3">
                                   <div className="flex items-start gap-2">
                                     {step.severity === 'critical' ? (
-                                      <AlertOctagon className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                                      <AlertOctagon className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                                     ) : step.severity === 'warning' ? (
-                                      <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
                                     ) : (
-                                      <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                      <Lightbulb className="h-4 w-4 text-info mt-0.5 flex-shrink-0" />
                                     )}
                                     <div>
                                       <p className="font-medium text-sm">{step.title}</p>
@@ -752,18 +752,18 @@ export function SourceDetailSheet({
                       <>
                         <div className="flex gap-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            <CheckCircle2 className="h-3 w-3 text-success" />
                             <span>{failureAnalysis.dkim.passed} passed</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <XCircle className="h-3 w-3 text-red-500" />
+                            <XCircle className="h-3 w-3 text-destructive" />
                             <span>{failureAnalysis.dkim.failed} failed</span>
                           </div>
                         </div>
                         {Object.entries(failureAnalysis.dkim.failuresByDomain).length > 0 && (
                           <div className="space-y-2">
                             {Object.entries(failureAnalysis.dkim.failuresByDomain).map(([domain, info]) => (
-                              <div key={domain} className="p-2 rounded border bg-red-50 dark:bg-red-900/10">
+                              <div key={domain} className="p-2 rounded border bg-destructive/10">
                                 <div className="flex items-center justify-between">
                                   <code className="text-xs font-medium">{domain}</code>
                                   <Badge variant="destructive" className="text-xs h-5">
@@ -772,7 +772,7 @@ export function SourceDetailSheet({
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {info.results.map(r => (
-                                    <Badge key={r} variant="outline" className="text-xs border-red-300">
+                                    <Badge key={r} variant="outline" className="text-xs border-destructive">
                                       {getResultLabel(r)}
                                     </Badge>
                                   ))}
@@ -804,18 +804,18 @@ export function SourceDetailSheet({
                       <>
                         <div className="flex gap-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            <CheckCircle2 className="h-3 w-3 text-success" />
                             <span>{failureAnalysis.spf.passed} passed</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <XCircle className="h-3 w-3 text-red-500" />
+                            <XCircle className="h-3 w-3 text-destructive" />
                             <span>{failureAnalysis.spf.failed} failed</span>
                           </div>
                         </div>
                         {Object.entries(failureAnalysis.spf.failuresByDomain).length > 0 && (
                           <div className="space-y-2">
                             {Object.entries(failureAnalysis.spf.failuresByDomain).map(([domain, info]) => (
-                              <div key={domain} className="p-2 rounded border bg-red-50 dark:bg-red-900/10">
+                              <div key={domain} className="p-2 rounded border bg-destructive/10">
                                 <div className="flex items-center justify-between">
                                   <code className="text-xs font-medium">{domain}</code>
                                   <Badge variant="destructive" className="text-xs h-5">
@@ -824,7 +824,7 @@ export function SourceDetailSheet({
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {info.results.map(r => (
-                                    <Badge key={r} variant="outline" className="text-xs border-red-300">
+                                    <Badge key={r} variant="outline" className="text-xs border-destructive">
                                       {getResultLabel(r)}
                                     </Badge>
                                   ))}
@@ -854,14 +854,14 @@ export function SourceDetailSheet({
                           </div>
                         )}
                         {failureAnalysis.dispositions['quarantine'] !== undefined && (
-                          <div className="text-center p-2 rounded bg-yellow-50 dark:bg-yellow-900/20">
-                            <p className="text-lg font-bold text-yellow-600">{failureAnalysis.dispositions['quarantine'].toLocaleString()}</p>
+                          <div className="text-center p-2 rounded bg-warning/10">
+                            <p className="text-lg font-bold text-warning">{failureAnalysis.dispositions['quarantine'].toLocaleString()}</p>
                             <p className="text-xs text-muted-foreground">Quarantined</p>
                           </div>
                         )}
                         {failureAnalysis.dispositions['reject'] !== undefined && (
-                          <div className="text-center p-2 rounded bg-red-50 dark:bg-red-900/20">
-                            <p className="text-lg font-bold text-red-600">{failureAnalysis.dispositions['reject'].toLocaleString()}</p>
+                          <div className="text-center p-2 rounded bg-destructive/10">
+                            <p className="text-lg font-bold text-destructive">{failureAnalysis.dispositions['reject'].toLocaleString()}</p>
                             <p className="text-xs text-muted-foreground">Rejected</p>
                           </div>
                         )}
@@ -874,7 +874,7 @@ export function SourceDetailSheet({
               {/* Failures tab - no data */}
               {activeTab === 'failures' && !failureAnalysis && (
                 <div className="text-center py-8">
-                  <ShieldCheck className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                  <ShieldCheck className="h-12 w-12 text-success mx-auto mb-3" />
                   <p className="font-medium">No failure data available</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Failure analysis data will appear once reports are processed.
@@ -925,19 +925,19 @@ export function SourceDetailSheet({
                               <span className="text-muted-foreground">
                                 {report.totalMessages.toLocaleString()} msgs
                               </span>
-                              <span className="text-green-600">
+                              <span className="text-success">
                                 {report.passedMessages.toLocaleString()} passed
                               </span>
-                              <span className="text-red-600">
+                              <span className="text-destructive">
                                 {report.failedMessages.toLocaleString()} failed
                               </span>
                               <span
                                 className={`font-medium ${
                                   report.passRate >= 90
-                                    ? 'text-green-600'
+                                    ? 'text-success'
                                     : report.passRate >= 70
-                                    ? 'text-yellow-600'
-                                    : 'text-red-600'
+                                    ? 'text-warning'
+                                    : 'text-destructive'
                                 }`}
                               >
                                 {report.passRate}%

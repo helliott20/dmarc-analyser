@@ -157,7 +157,7 @@ export function ByocSettings({
       {enabled && hasCredentials && !showForm && (
         <div className="p-4 bg-muted rounded-lg space-y-3">
           <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <CheckCircle2 className="h-4 w-4 text-success" />
             <span className="font-medium">OAuth credentials configured</span>
           </div>
           <p className="text-sm text-muted-foreground">

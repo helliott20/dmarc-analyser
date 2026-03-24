@@ -74,21 +74,21 @@ function getSourceTypeBadge(type: string) {
   switch (type) {
     case 'legitimate':
       return (
-        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        <Badge variant="secondary" className="bg-success/15 text-success">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Legitimate
         </Badge>
       );
     case 'suspicious':
       return (
-        <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <Badge variant="secondary" className="bg-destructive/15 text-destructive">
           <XCircle className="h-3 w-3 mr-1" />
           Suspicious
         </Badge>
       );
     case 'forwarded':
       return (
-        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+        <Badge variant="secondary" className="bg-info/15 text-info">
           Forwarded
         </Badge>
       );
@@ -123,7 +123,7 @@ function SpfDkimBadge({ pass, fail, label }: { pass: number; fail: number; label
   }
   if (fail === 0) {
     return (
-      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+      <Badge variant="secondary" className="text-xs bg-success/15 text-success">
         <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
         {label}
       </Badge>
@@ -131,14 +131,14 @@ function SpfDkimBadge({ pass, fail, label }: { pass: number; fail: number; label
   }
   if (pass === 0) {
     return (
-      <Badge variant="secondary" className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+      <Badge variant="secondary" className="text-xs bg-destructive/15 text-destructive">
         <XCircle className="h-2.5 w-2.5 mr-0.5" />
         {label}
       </Badge>
     );
   }
   return (
-    <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+    <Badge variant="secondary" className="text-xs bg-warning/15 text-warning">
       <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
       {label}
     </Badge>
@@ -309,7 +309,7 @@ export function SourcesTable({
                 <TableRow
                   key={source.id}
                   className={`cursor-pointer hover:bg-muted/50 ${
-                    rate < 50 && source.totalMessages > 0 ? 'bg-red-50/50 dark:bg-red-950/10' : ''
+                    rate < 50 && source.totalMessages > 0 ? 'bg-destructive/10' : ''
                   }`}
                   onClick={() => setSelectedSourceId(source.id)}
                 >
@@ -398,13 +398,13 @@ export function SourcesTable({
                       <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
                           className={`h-full ${
-                            rate >= 90 ? 'bg-green-500' : rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                            rate >= 90 ? 'bg-success' : rate >= 70 ? 'bg-warning' : 'bg-destructive'
                           }`}
                           style={{ width: `${rate}%` }}
                         />
                       </div>
                       <span className={`text-sm font-medium ${
-                        rate >= 90 ? 'text-green-600' : rate >= 70 ? 'text-yellow-600' : 'text-red-600'
+                        rate >= 90 ? 'text-success' : rate >= 70 ? 'text-warning' : 'text-destructive'
                       }`}>
                         {rate}%
                       </span>
@@ -446,7 +446,7 @@ export function SourcesTable({
             <div
               key={source.id}
               className={`p-4 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors ${
-                rate < 50 && source.totalMessages > 0 ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/10' : ''
+                rate < 50 && source.totalMessages > 0 ? 'border-destructive bg-destructive/10' : ''
               }`}
               onClick={() => setSelectedSourceId(source.id)}
             >
@@ -485,7 +485,7 @@ export function SourcesTable({
                         className="h-4 w-4 rounded object-contain"
                       />
                     )}
-                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <span className="text-xs font-medium text-info">
                       {knownSender.name}
                     </span>
                   </div>
@@ -512,7 +512,7 @@ export function SourcesTable({
                     {Number(source.totalMessages).toLocaleString()} messages
                   </span>
                   <span className={`text-sm font-bold ${
-                    rate >= 90 ? 'text-green-600' : rate >= 70 ? 'text-yellow-600' : 'text-red-600'
+                    rate >= 90 ? 'text-success' : rate >= 70 ? 'text-warning' : 'text-destructive'
                   }`}>
                     {rate}% pass
                   </span>
@@ -520,7 +520,7 @@ export function SourcesTable({
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full ${
-                      rate >= 90 ? 'bg-green-500' : rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                      rate >= 90 ? 'bg-success' : rate >= 70 ? 'bg-warning' : 'bg-destructive'
                     }`}
                     style={{ width: `${rate}%` }}
                   />

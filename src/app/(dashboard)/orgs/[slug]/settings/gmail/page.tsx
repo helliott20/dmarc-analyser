@@ -242,6 +242,30 @@ export default async function EmailImportPage({ params }: PageProps) {
         </Card>
       )}
 
+      {/* Self-hosted: Show configured report email */}
+      {!centralInboxEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Report Email Address
+            </CardTitle>
+            <CardDescription>
+              The email address configured to receive DMARC reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm">
+              <span className="text-green-400">{CENTRAL_INBOX_EMAIL}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Set via the <code className="bg-muted px-1 rounded">CENTRAL_INBOX_EMAIL</code> environment variable.
+              Add this address to your DMARC record as <code className="bg-muted px-1 rounded">rua=mailto:{CENTRAL_INBOX_EMAIL}</code>
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Gmail/BYOC Section */}
       <Card className={centralInboxEnabled ? 'border-dashed' : ''}>
         <CardHeader>

@@ -146,16 +146,16 @@ export function AddDomainStep({ onNext, onSkip, stepData }: AddDomainStepProps) 
         <h4 className="font-medium mb-2 text-sm">Examples:</h4>
         <ul className="text-sm text-muted-foreground space-y-1">
           <li className="flex items-center gap-2">
-            <span className="text-green-600">✓</span> example.com
+            <span className="text-success">✓</span> example.com
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-green-600">✓</span> my-company.co.uk
+            <span className="text-success">✓</span> my-company.co.uk
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-red-600">✗</span> www.example.com
+            <span className="text-destructive">✗</span> www.example.com
           </li>
           <li className="flex items-center gap-2">
-            <span className="text-red-600">✗</span> mail.example.com
+            <span className="text-destructive">✗</span> mail.example.com
           </li>
         </ul>
       </div>

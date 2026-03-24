@@ -35,6 +35,7 @@ async function main() {
   const { createCleanupWorker } = await import('./cleanup.worker');
   const { createIpEnrichmentWorker } = await import('./ip-enrichment.worker');
   const { createDnsCheckWorker } = await import('./dns-check.worker');
+  const { createSpfRefreshWorker } = await import('./spf-refresh.worker');
   const { setupRepeatableJobs, removeRepeatableJobs } = await import('../scheduler');
 
   // Graceful shutdown handling
@@ -65,6 +66,7 @@ async function main() {
   workers.push(createCleanupWorker());
   workers.push(createIpEnrichmentWorker());
   workers.push(createDnsCheckWorker());
+  workers.push(createSpfRefreshWorker());
 
   console.log(`[Workers] Started ${workers.length} workers:`);
   console.log('  - Gmail Sync (BYOC, every 15 min)');
@@ -75,6 +77,7 @@ async function main() {
   console.log('  - Cleanup (daily at 2am)');
   console.log('  - IP Enrichment (rate-limited)');
   console.log('  - DNS Check (every 6 hours)');
+  console.log('  - SPF Refresh (daily at 3am)');
 
   // Set up repeatable jobs
   console.log('[Workers] Setting up scheduled jobs...');

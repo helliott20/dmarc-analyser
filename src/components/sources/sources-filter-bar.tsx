@@ -43,31 +43,31 @@ const FILTER_OPTIONS: {
     value: 'legitimate',
     label: 'Legitimate',
     icon: CheckCircle2,
-    activeColor: 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400',
+    activeColor: 'bg-success/15 text-success hover:bg-success/20',
   },
   {
     value: 'suspicious',
     label: 'Suspicious',
     icon: XCircle,
-    activeColor: 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400',
+    activeColor: 'bg-destructive/15 text-destructive hover:bg-destructive/15',
   },
   {
     value: 'unknown',
     label: 'Unknown',
     icon: AlertTriangle,
-    activeColor: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400',
+    activeColor: 'bg-warning/15 text-warning hover:bg-warning/15',
   },
   {
     value: 'forwarded',
     label: 'Forwarded',
     icon: Forward,
-    activeColor: 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+    activeColor: 'bg-info/15 text-info hover:bg-info/15',
   },
   {
     value: 'failing',
     label: 'Failing',
     icon: AlertCircle,
-    activeColor: 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400',
+    activeColor: 'bg-destructive/15 text-destructive hover:bg-destructive/15',
   },
 ];
 
@@ -78,14 +78,19 @@ export function SourcesFilterBar({ counts }: SourcesFilterBarProps) {
   const currentFilter = (searchParams.get('filter') as SourceFilter) || 'all';
 
   const setFilter = (filter: SourceFilter) => {
+    // Clicking the active filter toggles back to "All"
+    const targetFilter = filter === currentFilter && filter !== 'all' ? 'all' : filter;
+
     const params = new URLSearchParams(searchParams.toString());
-    if (filter === 'all') {
+    if (targetFilter === 'all') {
       params.delete('filter');
     } else {
-      params.set('filter', filter);
+      params.set('filter', targetFilter);
     }
     const queryString = params.toString();
-    router.push(queryString ? `${pathname}?${queryString}` : pathname);
+    const url = queryString ? `${pathname}?${queryString}` : pathname;
+    router.push(url);
+    router.refresh();
   };
 
   return (

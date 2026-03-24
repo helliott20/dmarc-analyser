@@ -38,13 +38,13 @@ export function ApiKeyDisplay({ apiKey, keyName, onClose }: ApiKeyDisplayProps) 
       </DialogHeader>
 
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-          <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning rounded-md">
+          <AlertTriangle className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
           <div className="text-sm space-y-1">
-            <p className="font-medium text-yellow-900 dark:text-yellow-100">
+            <p className="font-medium text-warning">
               Save this key in a secure location
             </p>
-            <p className="text-yellow-800 dark:text-yellow-200">
+            <p className="text-warning">
               For security reasons, this is the only time you will be able to view
               this API key. If you lose it, you&apos;ll need to create a new one.
             </p>
@@ -72,7 +72,7 @@ export function ApiKeyDisplay({ apiKey, keyName, onClose }: ApiKeyDisplayProps) 
               className="flex-shrink-0"
             >
               {copied ? (
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-success" />
               ) : (
                 <Copy className="h-4 w-4" />
               )}

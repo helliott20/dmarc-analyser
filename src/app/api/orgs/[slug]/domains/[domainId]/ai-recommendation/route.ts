@@ -17,6 +17,7 @@ import {
   incrementUsage,
   checkCooldown,
   getCachedRecommendation,
+  getLatestRecommendation,
   cacheRecommendation,
   callGemini,
   recordError,
@@ -246,7 +247,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const context = await buildContext(domain, organization.id);
     const contextHash = hashContext(context);
 
-    // Try to get cached recommendation
+    // Try to get cached recommendation (exact match)
     const cached = await getCachedRecommendation(domainId, contextHash);
     if (cached) {
       return NextResponse.json({
@@ -262,10 +263,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Check cooldown status
     const cooldown = await checkCooldown(domainId);
 
+    // Fallback: return the most recent recommendation even if stale/hash-mismatched
+    // so the UI always shows the last AI response
+    const latest = await getLatestRecommendation(domainId);
+
     return NextResponse.json({
       available: true,
-      recommendation: null,
-      source: 'none',
+      recommendation: latest || null,
+      source: latest ? 'cache' : 'none',
       canGenerate: rateLimit.allowed && !cooldown.inCooldown,
       rateLimitRemaining: rateLimit.remaining,
       rateLimitResetAt: rateLimit.resetAt?.toISOString() || null,

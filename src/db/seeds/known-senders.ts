@@ -278,7 +278,7 @@ const knownSendersData = [
   },
 ];
 
-async function seedKnownSenders() {
+export async function seedKnownSenders() {
   console.log('🌱 Seeding known senders...\n');
 
   try {
@@ -341,4 +341,4 @@ if (require.main === module) {
     });
 }
 
-export { seedKnownSenders, knownSendersData };
+export { knownSendersData };

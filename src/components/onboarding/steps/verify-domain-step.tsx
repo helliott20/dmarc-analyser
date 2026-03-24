@@ -107,8 +107,8 @@ export function VerifyDomainStep({
       <div className="space-y-6">
         <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
+              <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
           </div>
           <h2 className="text-2xl font-bold">Domain Verified!</h2>
@@ -207,9 +207,9 @@ export function VerifyDomainStep({
           </p>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex gap-2">
-          <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-900">
+        <div className="bg-info/10 border border-info p-3 rounded-lg flex gap-2">
+          <AlertCircle className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-info">
             <strong>Note:</strong> DNS propagation can take 5-60 minutes. You can
             skip this step and verify your domain later from the domain settings.
           </div>

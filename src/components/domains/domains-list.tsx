@@ -518,7 +518,7 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false, ruaEmail 
                             className={cn(
                               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
                               copiedDomainId === domain.id && copiedType === 'domain'
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                ? "bg-success/15 text-success"
                                 : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
                             aria-label="Copy domain name"
@@ -550,7 +550,7 @@ export function DomainsList({ domains, orgSlug, showVolumeBar = false, ruaEmail 
                             className={cn(
                               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors",
                               copiedDomainId === domain.id && copiedType === 'rua'
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                ? "bg-success/15 text-success"
                                 : "bg-muted text-muted-foreground hover:bg-muted/80"
                             )}
                             aria-label="Copy DMARC record with RUA"

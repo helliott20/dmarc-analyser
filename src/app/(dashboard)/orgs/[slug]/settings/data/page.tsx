@@ -117,11 +117,11 @@ export default async function DataManagementPage({ params }: PageProps) {
             </ul>
           </div>
 
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm font-semibold text-blue-900 mb-1">
+          <div className="p-3 bg-info/10 border border-info/30 rounded-lg">
+            <p className="text-sm font-semibold text-info mb-1">
               Export Retention
             </p>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-info">
               Exports are kept for 7 days after creation. After that, they are automatically
               deleted. You can download the same data multiple times within this period.
             </p>
