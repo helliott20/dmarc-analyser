@@ -85,8 +85,8 @@ export function DataDeletionSection({
       </CardHeader>
       <CardContent className="space-y-6">
         {!isOwner ? (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-900">
+          <div className="p-4 bg-warning/10 border border-warning rounded-lg">
+            <p className="text-sm text-warning">
               Only organization owners can delete all data. Contact your organization owner if you
               need to perform this action.
             </p>
@@ -115,11 +115,11 @@ export function DataDeletionSection({
                 </p>
               </div>
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-semibold text-blue-900 mb-1">
+              <div className="p-4 bg-info/10 border border-info rounded-lg">
+                <p className="text-sm font-semibold text-info mb-1">
                   Recommendation: Export before deleting
                 </p>
-                <p className="text-sm text-blue-800">
+                <p className="text-sm text-info">
                   We strongly recommend exporting your data before deletion. Use the Data Export
                   section above to download your data in CSV format for your records.
                 </p>

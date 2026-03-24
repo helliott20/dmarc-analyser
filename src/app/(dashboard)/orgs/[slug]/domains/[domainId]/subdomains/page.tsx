@@ -84,21 +84,21 @@ async function getDomainSubdomains(domainId: string) {
 function getPassRateBadge(passRate: number) {
   if (passRate >= 95) {
     return (
-      <Badge variant="secondary" className="bg-green-100 text-green-700">
+      <Badge variant="secondary" className="bg-success/10 text-success">
         <CheckCircle2 className="h-3 w-3 mr-1" />
         {passRate.toFixed(1)}%
       </Badge>
     );
   } else if (passRate >= 80) {
     return (
-      <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+      <Badge variant="secondary" className="bg-warning/10 text-warning">
         <AlertTriangle className="h-3 w-3 mr-1" />
         {passRate.toFixed(1)}%
       </Badge>
     );
   } else {
     return (
-      <Badge variant="secondary" className="bg-red-100 text-red-700">
+      <Badge variant="secondary" className="bg-destructive/10 text-destructive">
         <XCircle className="h-3 w-3 mr-1" />
         {passRate.toFixed(1)}%
       </Badge>

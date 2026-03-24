@@ -218,11 +218,11 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-md text-yellow-700 dark:text-yellow-400">
+          <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-md text-warning">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium">Authorisation required</p>
-              <p className="text-yellow-600 dark:text-yellow-500">
+              <p className="text-warning">
                 To send emails, you need to authorise a Gmail account with sending permissions.
               </p>
             </div>
@@ -283,11 +283,11 @@ export function EmailSendingCard({ accounts, orgSlug, orgId }: EmailSendingCardP
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-md text-green-700 dark:text-green-400">
+        <div className="flex items-start gap-2 p-3 bg-success/10 rounded-md text-success">
           <CheckCircle2 className="h-4 w-4 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium">Email sending is enabled</p>
-            <p className="text-green-600 dark:text-green-500">
+            <p className="text-success">
               Alerts and scheduled reports will be sent from your authorised Gmail account.
             </p>
           </div>

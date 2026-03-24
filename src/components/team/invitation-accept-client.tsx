@@ -113,8 +113,8 @@ export function InvitationAcceptClient({
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                <CheckCircle2 className="h-6 w-6 text-success" />
               </div>
             </div>
             <CardTitle className="text-center">Welcome to the team!</CardTitle>
@@ -208,8 +208,8 @@ export function InvitationAcceptClient({
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/10">
-                <XCircle className="h-6 w-6 text-yellow-500" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
+                <XCircle className="h-6 w-6 text-warning" />
               </div>
             </div>
             <CardTitle className="text-center">Email Mismatch</CardTitle>

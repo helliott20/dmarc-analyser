@@ -101,7 +101,7 @@ export function DomainStats({ orgSlug, domainId, initialStats }: DomainStatsProp
           </>
         ) : (
           <>
-            <span className="h-2 w-2 rounded-full bg-gray-300" />
+            <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
             <span>Connecting...</span>
           </>
         )}

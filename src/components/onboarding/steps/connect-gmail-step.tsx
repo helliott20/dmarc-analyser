@@ -90,7 +90,7 @@ export function ConnectGmailStep({
             <h4 className="font-semibold">Add this email to your DMARC record</h4>
             <div className="flex items-center gap-2">
               <div className="flex-1 p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm">
-                <span className="text-green-400">{CENTRAL_INBOX_EMAIL}</span>
+                <span className="text-success">{CENTRAL_INBOX_EMAIL}</span>
               </div>
               <Button
                 variant="outline"
@@ -108,13 +108,13 @@ export function ConnectGmailStep({
             </p>
             <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
               <div>
-                <span className="text-slate-500">Record:</span> <span className="text-blue-400">_dmarc.{stepData.domain || 'yourdomain.com'}</span>
+                <span className="text-slate-500">Record:</span> <span className="text-info">_dmarc.{stepData.domain || 'yourdomain.com'}</span>
               </div>
               <div>
-                <span className="text-slate-500">Type:</span> <span className="text-yellow-400">TXT</span>
+                <span className="text-slate-500">Type:</span> <span className="text-warning">TXT</span>
               </div>
               <div>
-                <span className="text-slate-500">Value:</span> <span className="text-slate-300">v=DMARC1; p=none; rua=mailto:</span><span className="text-green-400">{CENTRAL_INBOX_EMAIL}</span>
+                <span className="text-slate-500">Value:</span> <span className="text-slate-300">v=DMARC1; p=none; rua=mailto:</span><span className="text-success">{CENTRAL_INBOX_EMAIL}</span>
               </div>
             </div>
           </div>
@@ -123,7 +123,7 @@ export function ConnectGmailStep({
         {/* Benefits */}
         <div className="space-y-3 max-w-md mx-auto bg-muted/50 p-4 rounded-lg">
           <div className="flex gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">No Account Setup Needed</p>
               <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export function ConnectGmailStep({
           </div>
 
           <div className="flex gap-3">
-            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">Reports Arrive Automatically</p>
               <p className="text-sm text-muted-foreground">
@@ -144,9 +144,9 @@ export function ConnectGmailStep({
         </div>
 
         {/* Timeline info */}
-        <div className="max-w-md mx-auto flex gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-800 dark:text-blue-300">
+        <div className="max-w-md mx-auto flex gap-2 p-3 bg-info/10 border border-info rounded-lg">
+          <Info className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-info">
             Reports typically start arriving within 24-48 hours after updating your DNS. Major providers like Google, Microsoft, and Yahoo send daily aggregate reports.
           </p>
         </div>
@@ -203,7 +203,7 @@ export function ConnectGmailStep({
       {/* Benefits */}
       <div className="space-y-3 max-w-md mx-auto bg-muted/50 p-4 rounded-lg">
         <div className="flex gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">Automatic Import</p>
             <p className="text-sm text-muted-foreground">
@@ -213,7 +213,7 @@ export function ConnectGmailStep({
         </div>
 
         <div className="flex gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">Privacy Protected</p>
             <p className="text-sm text-muted-foreground">
@@ -233,11 +233,11 @@ export function ConnectGmailStep({
           After connecting Gmail, add the <code className="bg-muted px-1 rounded">rua</code> tag to your domain&apos;s DMARC record to tell email providers where to send reports:
         </p>
         <div className="ml-8 p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
-          <span className="text-slate-400">v=DMARC1; p=none;</span> rua=mailto:<span className="text-green-400">your-email@gmail.com</span>
+          <span className="text-slate-400">v=DMARC1; p=none;</span> rua=mailto:<span className="text-success">your-email@gmail.com</span>
         </div>
-        <div className="ml-8 flex gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-800 dark:text-blue-300">
+        <div className="ml-8 flex gap-2 p-3 bg-info/10 border border-info rounded-lg">
+          <Info className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-info">
             Reports typically start arriving within 24-48 hours after updating your DNS. Major providers like Google, Microsoft, and Yahoo send daily aggregate reports.
           </p>
         </div>

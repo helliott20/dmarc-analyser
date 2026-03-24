@@ -501,7 +501,7 @@ export function TimelineCharts({ orgSlug, domainId }: TimelineChartsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">
+            <div className="text-2xl font-bold text-success">
               {data.summary.passedMessages.toLocaleString()}
             </div>
           </CardContent>
@@ -513,7 +513,7 @@ export function TimelineCharts({ orgSlug, domainId }: TimelineChartsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">
+            <div className="text-2xl font-bold text-destructive">
               {data.summary.failedMessages.toLocaleString()}
             </div>
           </CardContent>

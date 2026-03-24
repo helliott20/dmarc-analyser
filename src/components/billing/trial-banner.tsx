@@ -54,29 +54,29 @@ export function TrialBanner({ orgSlug, trialEndsAt, status }: TrialBannerProps) 
     <div
       className={`relative flex items-center justify-between gap-4 px-4 py-3 text-sm ${
         isExpired
-          ? 'bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900'
+          ? 'bg-destructive/10 border-b border-destructive'
           : isUrgent
-          ? 'bg-yellow-50 dark:bg-yellow-950/30 border-b border-yellow-200 dark:border-yellow-900'
-          : 'bg-blue-50 dark:bg-blue-950/30 border-b border-blue-200 dark:border-blue-900'
+          ? 'bg-warning/10 border-b border-warning'
+          : 'bg-info/10 border-b border-info'
       }`}
     >
       <div className="flex items-center gap-3">
         <Clock
           className={`h-4 w-4 ${
             isExpired
-              ? 'text-red-500'
+              ? 'text-destructive'
               : isUrgent
-              ? 'text-yellow-500'
-              : 'text-blue-500'
+              ? 'text-warning'
+              : 'text-info'
           }`}
         />
         <span
           className={
             isExpired
-              ? 'text-red-700 dark:text-red-300'
+              ? 'text-destructive'
               : isUrgent
-              ? 'text-yellow-700 dark:text-yellow-300'
-              : 'text-blue-700 dark:text-blue-300'
+              ? 'text-warning'
+              : 'text-info'
           }
         >
           {isExpired

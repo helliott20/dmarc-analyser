@@ -219,7 +219,7 @@ export function GmailAccountCard({
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {isSyncing ? (
                 <>
-                  <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                  <Loader2 className="h-3 w-3 animate-spin text-info" />
                   <span>
                     Syncing... {syncProgress?.emailsProcessed || 0} emails, {syncProgress?.reportsFound || 0} reports
                   </span>
@@ -231,7 +231,7 @@ export function GmailAccountCard({
                 </>
               ) : account.lastSyncAt ? (
                 <>
-                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  <CheckCircle2 className="h-3 w-3 text-success" />
                   <span>Last sync: {formatLastSync(account.lastSyncAt)}</span>
                   {syncProgress && (
                     <span className="text-xs">
@@ -315,7 +315,7 @@ export function GmailAccountCard({
                     {isDeleting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     )}
                   </Button>
                 </AlertDialogTrigger>

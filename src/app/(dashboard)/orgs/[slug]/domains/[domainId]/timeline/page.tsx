@@ -67,15 +67,15 @@ export default async function TimelinePage({ params }: PageProps) {
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">Timeline</h1>
         </div>
-        <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20">
+        <Card className="border-warning/30 bg-warning/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
               <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium text-warning">
                   Domain verification required
                 </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                <p className="text-sm text-warning/80 mt-1">
                   You need to verify ownership of this domain before viewing timeline data.
                   Go to the domain overview page to complete verification.
                 </p>

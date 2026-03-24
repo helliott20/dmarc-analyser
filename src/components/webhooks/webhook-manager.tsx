@@ -286,9 +286,9 @@ export function WebhookManager({ orgSlug, orgId }: WebhookManagerProps) {
       return <Badge variant="destructive">Failing</Badge>;
     }
     if (webhook.failureCount > 0) {
-      return <Badge variant="outline" className="border-yellow-500 text-yellow-700">Warning</Badge>;
+      return <Badge variant="outline" className="border-warning text-warning">Warning</Badge>;
     }
-    return <Badge variant="outline" className="border-green-500 text-green-700">Active</Badge>;
+    return <Badge variant="outline" className="border-success text-success">Active</Badge>;
   };
 
   const getTypeIcon = (type: string) => {
@@ -328,11 +328,11 @@ export function WebhookManager({ orgSlug, orgId }: WebhookManagerProps) {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm font-semibold text-yellow-900 mb-2">
+                    <div className="p-4 bg-warning/10 border border-warning rounded-lg">
+                      <p className="text-sm font-semibold text-warning mb-2">
                         Important: Save Your Webhook Secret
                       </p>
-                      <p className="text-sm text-yellow-800 mb-3">
+                      <p className="text-sm text-warning mb-3">
                         This secret will be used to sign webhook payloads. Store it securely
                         as it will not be displayed again.
                       </p>
@@ -567,7 +567,7 @@ export function WebhookManager({ orgSlug, orgId }: WebhookManagerProps) {
                           </span>
                         )}
                         {webhook.failureCount > 0 && (
-                          <span className="text-yellow-600">
+                          <span className="text-warning">
                             {webhook.failureCount} failures
                           </span>
                         )}
@@ -599,7 +599,7 @@ export function WebhookManager({ orgSlug, orgId }: WebhookManagerProps) {
                       variant="ghost"
                       onClick={() => handleDeleteWebhook(webhook.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>

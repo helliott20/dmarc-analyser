@@ -22,8 +22,8 @@ export function CompleteStep({ onNext, stepData }: CompleteStepProps) {
       {/* Success Header */}
       <div className="text-center space-y-4">
         <div className="flex justify-center mb-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-            <CheckCircle2 className="h-10 w-10 text-green-600" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success/15">
+            <CheckCircle2 className="h-10 w-10 text-success" />
           </div>
         </div>
         <h2 className="text-3xl font-bold">You&apos;re All Set!</h2>
@@ -36,8 +36,8 @@ export function CompleteStep({ onNext, stepData }: CompleteStepProps) {
       <div className="grid gap-3 max-w-md mx-auto">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/15">
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
             <div className="flex-1">
               <p className="font-medium">Organization Created</p>
@@ -51,8 +51,8 @@ export function CompleteStep({ onNext, stepData }: CompleteStepProps) {
         {stepData.domainId && (
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/15">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
               <div className="flex-1">
                 <p className="font-medium">Domain Added</p>
@@ -67,8 +67,8 @@ export function CompleteStep({ onNext, stepData }: CompleteStepProps) {
         {stepData.gmailConnected && (
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/15">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
               <div className="flex-1">
                 <p className="font-medium">Gmail Connected</p>

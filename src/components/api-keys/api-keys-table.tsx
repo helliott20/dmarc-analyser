@@ -156,7 +156,7 @@ export function ApiKeysTable({ orgSlug, canManage }: ApiKeysTableProps) {
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {key.expiresAt ? (
-                  <span className={isExpired(key.expiresAt) ? 'text-red-600' : ''}>
+                  <span className={isExpired(key.expiresAt) ? 'text-destructive' : ''}>
                     {isExpired(key.expiresAt)
                       ? 'Expired'
                       : formatDistanceToNow(new Date(key.expiresAt), {
@@ -174,7 +174,7 @@ export function ApiKeysTable({ orgSlug, canManage }: ApiKeysTableProps) {
                     Inactive
                   </Badge>
                 ) : (
-                  <Badge variant="default" className="bg-green-600">
+                  <Badge variant="default" className="bg-success">
                     Active
                   </Badge>
                 )}

@@ -365,28 +365,28 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case 'active':
       return (
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+        <Badge className="bg-success/10 text-success hover:bg-success/10">
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Active
         </Badge>
       );
     case 'trialing':
       return (
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+        <Badge className="bg-info/10 text-info hover:bg-info/10">
           <Clock className="h-3 w-3 mr-1" />
           Trial
         </Badge>
       );
     case 'past_due':
       return (
-        <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
+        <Badge className="bg-warning/10 text-warning hover:bg-warning/10">
           <AlertTriangle className="h-3 w-3 mr-1" />
           Past Due
         </Badge>
       );
     case 'canceled':
       return (
-        <Badge variant="secondary">
+        <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10">
           Canceled
         </Badge>
       );

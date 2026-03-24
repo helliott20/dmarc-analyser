@@ -136,7 +136,7 @@ async function getReportRecords(reportId: string, domainId: string) {
 function getResultBadge(result: string | null | undefined) {
   if (result === 'pass') {
     return (
-      <Badge variant="secondary" className="bg-green-100 text-green-700">
+      <Badge variant="secondary" className="bg-success/10 text-success">
         <CheckCircle2 className="h-3 w-3 mr-1" />
         Pass
       </Badge>
@@ -144,7 +144,7 @@ function getResultBadge(result: string | null | undefined) {
   }
   if (result === 'fail') {
     return (
-      <Badge variant="secondary" className="bg-red-100 text-red-700">
+      <Badge variant="secondary" className="bg-destructive/10 text-destructive">
         <XCircle className="h-3 w-3 mr-1" />
         Fail
       </Badge>

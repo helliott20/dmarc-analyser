@@ -103,7 +103,7 @@ export function SessionsClient({ sessions, currentSessionToken }: SessionsClient
       {/* Stats */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-green-600" />
+          <CheckCircle className="h-5 w-5 text-success" />
           <span className="text-sm font-medium">
             {activeSessionsCount} active {activeSessionsCount === 1 ? 'session' : 'sessions'}
           </span>
@@ -240,15 +240,15 @@ export function SessionsClient({ sessions, currentSessionToken }: SessionsClient
       )}
 
       {/* Info Card */}
-      <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
+      <Card className="border-info bg-info/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <AlertTriangle className="h-5 w-5 text-info" />
             <div className="space-y-1">
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <p className="text-sm font-medium text-info">
                 Session Tracking
               </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
+              <p className="text-sm text-info">
                 This is a basic session view. In production, additional metadata like device type,
                 browser, IP address, and location would be tracked for better security monitoring.
               </p>
